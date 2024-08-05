@@ -40,7 +40,24 @@ impl Display for BitBoard {
 }
 
 impl BitBoard {
-    pub const fn new(value: u64) -> BitBoard {
+    pub const fn new(value: u64) -> Self {
         Self { inner: value }
+    }
+
+    pub const fn empty() -> Self {
+        Self { inner: 0 }
+    }
+
+    pub const fn or(self, other: Self) -> Self {
+        Self {
+            inner: self.inner | other.inner,
+        }
+    }
+
+    pub const fn opt_or(self, other: Option<Self>) -> Self {
+        match other {
+            Some(bb) => self.or(bb),
+            None => self,
+        }
     }
 }
