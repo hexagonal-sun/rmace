@@ -2,8 +2,10 @@ use std::fmt::Debug;
 
 use strum::EnumIter;
 
+use super::BitBoard;
+
 #[derive(PartialEq, Clone, Copy)]
-struct Locus {
+pub struct Locus {
     pos: i8,
 }
 
@@ -146,6 +148,10 @@ impl Locus {
         let file: File = File::from_idx(self.pos % 8);
 
         (rank, file)
+    }
+
+    pub const fn to_bitboard(self) -> BitBoard {
+        BitBoard::new(1 << self.pos)
     }
 }
 
