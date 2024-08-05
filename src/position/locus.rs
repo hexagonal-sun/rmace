@@ -137,6 +137,10 @@ impl Locus {
         }
     }
 
+    pub const fn to_idx(self) -> u8 {
+        self.pos as u8
+    }
+
     pub const fn from_rank_file(rank: Rank, file: File) -> Locus {
         Self {
             pos: file as i8 + (rank as i8 * 8),
