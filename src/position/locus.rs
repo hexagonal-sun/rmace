@@ -4,6 +4,14 @@ use strum::EnumIter;
 
 use super::BitBoard;
 
+macro_rules! loc {
+    ($file:ident, $rank:ident) => {
+        Locus::from_rank_file(Rank::$rank, File::$file)
+    };
+}
+
+pub(crate) use loc;
+
 #[derive(PartialEq, Clone, Copy)]
 pub struct Locus {
     pos: i8,
