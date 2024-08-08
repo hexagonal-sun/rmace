@@ -1,6 +1,5 @@
-use std::{fmt::Display, mem::variant_count};
-
 use bitboard::BitBoard;
+use strum::EnumCount;
 
 use crate::piece::{Colour, PieceKind};
 
@@ -10,7 +9,7 @@ pub mod movegen;
 
 #[derive(Clone, PartialEq)]
 struct Position {
-    bboards: [BitBoard; variant_count::<PieceKind>() * 2],
+    bboards: [BitBoard; PieceKind::COUNT * 2],
     to_play: Colour,
 }
 

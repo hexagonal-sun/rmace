@@ -1,9 +1,9 @@
-use std::mem::variant_count;
+use strum::EnumCount;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum Colour {
     White = 0,
-    Black = variant_count::<PieceKind>() as isize,
+    Black = PieceKind::COUNT as isize,
 }
 
 impl Colour {
@@ -15,7 +15,7 @@ impl Colour {
     }
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, EnumCount)]
 pub enum PieceKind {
     Pawn,
     Rook,
