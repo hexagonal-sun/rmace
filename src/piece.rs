@@ -40,3 +40,28 @@ impl Display for PieceKind {
         f.write_char(c)
     }
 }
+
+pub struct Piece {
+    kind: PieceKind,
+    colour: Colour,
+}
+
+impl Piece {
+    pub fn new(kind: PieceKind, colour: Colour) -> Self {
+        Self { kind, colour }
+    }
+}
+
+impl Display for Piece {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let piece = format!("{}", self.kind);
+
+        let s = if self.colour == Colour::Black {
+            piece
+        } else {
+            piece.to_ascii_uppercase()
+        };
+
+        f.write_str(s.as_str())
+    }
+}
