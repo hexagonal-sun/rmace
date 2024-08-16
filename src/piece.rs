@@ -1,4 +1,4 @@
-use strum::EnumCount;
+use strum::{EnumCount, EnumIter};
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum Colour {
@@ -15,7 +15,7 @@ impl Colour {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, EnumCount)]
+#[derive(Clone, Copy, PartialEq, EnumCount, EnumIter)]
 pub enum PieceKind {
     Pawn,
     Rook,
