@@ -1,7 +1,10 @@
+use position::{locus::Locus, movegen::knight::ATTACK_KNIGHT, Position};
 
 pub mod piece;
 mod position;
 
 fn main() {
-    println!("Hello, world!");
+    let pos = Position::default();
+
+    println!("{pos}");
 }
