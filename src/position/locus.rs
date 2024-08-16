@@ -165,6 +165,26 @@ impl Locus {
     pub const fn to_bitboard(self) -> BitBoard {
         BitBoard::new(1 << self.pos)
     }
+
+    pub fn iter_all_squares() -> AllSquareIter {
+        AllSquareIter { idx: 0 }
+    }
+}
+
+pub struct AllSquareIter {
+    idx: u8,
+}
+
+impl Iterator for AllSquareIter {
+    type Item = Locus;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let ret = Locus::from_idx(self.idx);
+
+        self.idx += 1;
+
+        ret
+    }
 }
 
 #[cfg(test)]
