@@ -1,4 +1,7 @@
-use std::{fmt::Display, ops::{BitAnd, Not}};
+use std::{
+    fmt::Display,
+    ops::{BitAnd, Not},
+};
 
 use strum::IntoEnumIterator;
 
@@ -14,7 +17,9 @@ impl BitAnd for BitBoard {
     type Output = Self;
 
     fn bitand(self, rhs: Self) -> Self::Output {
-        Self { inner: self.inner & rhs.inner }
+        Self {
+            inner: self.inner & rhs.inner,
+        }
     }
 }
 
@@ -77,7 +82,11 @@ impl BitBoard {
         }
     }
 
-    pub fn iter_pieces(self)  -> PiecesIterator {
+    pub fn has_piece_at(self, loc: Locus) -> bool {
+        self.inner & 1 << loc.to_idx() != 0
+    }
+
+    pub fn iter_pieces(self) -> PiecesIterator {
         PiecesIterator { bb: self, shift: 0 }
     }
 }
@@ -110,7 +119,9 @@ impl Iterator for PiecesIterator {
 
 #[cfg(test)]
 mod tests {
-    use crate::position::locus::{self, loc, File, Locus, Rank};
+    use strum::IntoEnumIterator;
+
+    use crate::position::locus::{loc, File, Locus, Rank};
 
     use super::BitBoard;
 
@@ -121,12 +132,19 @@ mod tests {
         assert_eq!(iter.next(), Some(Locus::from_rank_file(Rank::One, File::A)));
         assert_eq!(iter.next(), None);
 
-        let b = BitBoard { inner: 0x8000000000000000 };
+        let b = BitBoard {
+            inner: 0x8000000000000000,
+        };
         let mut iter = b.iter_pieces();
-        assert_eq!(iter.next(), Some(Locus::from_rank_file(Rank::Eight, File::H)));
+        assert_eq!(
+            iter.next(),
+            Some(Locus::from_rank_file(Rank::Eight, File::H))
+        );
         assert_eq!(iter.next(), None);
 
-        let mut b = BitBoard { inner: 0b11000000110100101 };
+        let mut b = BitBoard {
+            inner: 0b11000000110100101,
+        };
         b.inner |= 0x8000000000000000;
 
         let mut iter = b.iter_pieces();
@@ -141,4 +159,36 @@ mod tests {
         assert_eq!(iter.next(), None);
     }
 
+    #[test]
+    fn piece_at() {
+        let b = BitBoard { inner: 0b1 };
+        assert!(b.has_piece_at(loc!(A, One)));
+        assert!(!b.has_piece_at(loc!(A, Two)));
+        assert!(!b.has_piece_at(loc!(E, Four)));
+
+        let b = BitBoard { inner: 0b10 };
+        assert!(!b.has_piece_at(loc!(A, One)));
+        assert!(!b.has_piece_at(loc!(E, Four)));
+        assert!(b.has_piece_at(loc!(B, One)));
+
+        let b = BitBoard { inner: 0b1000101 };
+        assert!(b.has_piece_at(loc!(A, One)));
+        assert!(!b.has_piece_at(loc!(B, One)));
+        assert!(b.has_piece_at(loc!(C, One)));
+        assert!(!b.has_piece_at(loc!(D, One)));
+        assert!(!b.has_piece_at(loc!(E, One)));
+        assert!(!b.has_piece_at(loc!(F, One)));
+        assert!(b.has_piece_at(loc!(G, One)));
+        assert!(!b.has_piece_at(loc!(H, One)));
+
+        for file in File::iter() {
+            assert!(!b.has_piece_at(Locus::from_rank_file(Rank::Two, file)));
+            assert!(!b.has_piece_at(Locus::from_rank_file(Rank::Three, file)));
+            assert!(!b.has_piece_at(Locus::from_rank_file(Rank::Four, file)));
+            assert!(!b.has_piece_at(Locus::from_rank_file(Rank::Five, file)));
+            assert!(!b.has_piece_at(Locus::from_rank_file(Rank::Six, file)));
+            assert!(!b.has_piece_at(Locus::from_rank_file(Rank::Seven, file)));
+            assert!(!b.has_piece_at(Locus::from_rank_file(Rank::Eight, file)));
+        }
+    }
 }
