@@ -19,7 +19,7 @@ impl Colour {
 }
 
 #[derive(Clone, Copy, PartialEq, EnumCount, EnumIter, TryFromPrimitive, Debug)]
-#[repr(usize)]
+#[repr(u8)]
 pub enum PieceKind {
     Pawn,
     Rook,
@@ -56,22 +56,22 @@ pub(crate) use mkp;
 
 #[derive(Clone, Copy, PartialEq)]
 pub struct Piece {
-    pub idx: usize,
+    pub idx: u8,
 }
 
 impl Piece {
     pub fn new(kind: PieceKind, colour: Colour) -> Self {
         Self {
-            idx: kind as usize + colour as usize,
+            idx: kind as u8 + colour as u8,
         }
     }
 
     pub fn kind(self) -> PieceKind {
-        PieceKind::try_from(self.idx % PieceKind::COUNT).unwrap()
+        PieceKind::try_from(self.idx % PieceKind::COUNT as u8).unwrap()
     }
 
     pub fn colour(self) -> Colour {
-        if self.idx / PieceKind::COUNT == 0 {
+        if self.idx / PieceKind::COUNT as u8 == 0 {
             Colour::White
         } else {
             Colour::Black
