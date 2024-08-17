@@ -1,10 +1,13 @@
-use std::fmt::Display;
+use std::{
+    fmt::Display,
+    ops::{Index, IndexMut},
+};
 
 use bitboard::BitBoard;
 use locus::{loc, File, Locus, Rank};
 use strum::{EnumCount, IntoEnumIterator};
 
-use crate::piece::{Colour, Piece, PieceKind};
+use crate::piece::{mkp, Colour, Piece, PieceKind};
 
 pub mod bitboard;
 pub mod locus;
@@ -16,17 +19,7 @@ pub struct Position {
     to_play: Colour,
 }
 
-macro_rules! pidx {
-    ($colour:ident, $kind:ident) => {
-        crate::piece::PieceKind::$kind as usize + crate::piece::Colour::$colour as usize
-    };
-}
-
 impl Position {
-    pub fn lookup(&self, colour: Colour, kind: PieceKind) -> BitBoard {
-        self.bboards[colour as usize + kind as usize]
-    }
-
     pub fn piece_at_loc(&self, l: Locus) -> Option<Piece> {
         for p in PieceKind::iter() {
             let w_bb = self.bboards[p as usize];
@@ -46,6 +39,13 @@ impl Position {
 
     pub fn movegen(&self) -> Vec<Position> {
         todo!()
+    }
+
+    pub fn empty() -> Self {
+        Self {
+            bboards: [BitBoard::empty(); PieceKind::COUNT * 2],
+            to_play: Colour::White,
+        }
     }
 }
 
@@ -74,30 +74,42 @@ impl Display for Position {
     }
 }
 
+impl Index<Piece> for Position {
+    type Output = BitBoard;
+
+    fn index(&self, index: Piece) -> &Self::Output {
+        self.bboards.index(index.idx)
+    }
+}
+
+impl IndexMut<Piece> for Position {
+    fn index_mut(&mut self, index: Piece) -> &mut Self::Output {
+        self.bboards.index_mut(index.idx)
+    }
+}
+
 impl Default for Position {
     fn default() -> Self {
-        let pawns   = 0b11111111;
-        let rooks   = 0b10000001;
+        let mut pos = Self::empty();
+
+        let pawns = 0b11111111;
+        let rooks = 0b10000001;
         let knights = 0b01000010;
         let bishops = 0b00100100;
 
-        let mut bboards: [BitBoard; PieceKind::COUNT * 2] = [BitBoard::empty(); PieceKind::COUNT * 2];
-        bboards[pidx!(White, Pawn)] = BitBoard::new(pawns << 8);
-        bboards[pidx!(Black, Pawn)] = BitBoard::new(pawns << 48);
-        bboards[pidx!(White, Rook)] = BitBoard::new(rooks);
-        bboards[pidx!(Black, Rook)] = BitBoard::new(rooks << 56);
-        bboards[pidx!(White, Knight)] = BitBoard::new(knights);
-        bboards[pidx!(Black, Knight)] = BitBoard::new(knights << 56);
-        bboards[pidx!(White, Bishop)] = BitBoard::new(bishops);
-        bboards[pidx!(Black, Bishop)] = BitBoard::new(bishops << 56);
-        bboards[pidx!(White, King)] = loc!(E, One).to_bitboard();
-        bboards[pidx!(Black, King)] = loc!(E, Eight).to_bitboard();
-        bboards[pidx!(White, Queen)] = loc!(D, One).to_bitboard();
-        bboards[pidx!(Black, Queen)] = loc!(D, Eight).to_bitboard();
+        pos[mkp!(White, Pawn)] = BitBoard::new(pawns << 8);
+        pos[mkp!(Black, Pawn)] = BitBoard::new(pawns << 48);
+        pos[mkp!(White, Rook)] = BitBoard::new(rooks);
+        pos[mkp!(Black, Rook)] = BitBoard::new(rooks << 56);
+        pos[mkp!(White, Knight)] = BitBoard::new(knights);
+        pos[mkp!(Black, Knight)] = BitBoard::new(knights << 56);
+        pos[mkp!(White, Bishop)] = BitBoard::new(bishops);
+        pos[mkp!(Black, Bishop)] = BitBoard::new(bishops << 56);
+        pos[mkp!(White, King)] = loc!(E, One).to_bitboard();
+        pos[mkp!(Black, King)] = loc!(E, Eight).to_bitboard();
+        pos[mkp!(White, Queen)] = loc!(D, One).to_bitboard();
+        pos[mkp!(Black, Queen)] = loc!(D, Eight).to_bitboard();
 
-        Self {
-            bboards,
-            to_play: Colour::White,
-        }
+        pos
     }
 }
