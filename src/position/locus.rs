@@ -6,7 +6,10 @@ use super::BitBoard;
 
 macro_rules! loc {
     ($file:ident, $rank:ident) => {
-        Locus::from_rank_file(Rank::$rank, File::$file)
+        crate::position::locus::Locus::from_rank_file(
+            crate::position::locus::Rank::$rank,
+            crate::position::locus::File::$file,
+        )
     };
 }
 
