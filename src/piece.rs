@@ -1,6 +1,6 @@
-use std::fmt::{Display, Write};
+use std::fmt::{Debug, Display, Write};
 
-use num_enum::{FromPrimitive, TryFromPrimitive};
+use num_enum::TryFromPrimitive;
 use strum::{EnumCount, EnumIter};
 
 #[derive(Clone, Copy, PartialEq, EnumIter, Debug)]
@@ -57,6 +57,12 @@ pub(crate) use mkp;
 #[derive(Clone, Copy, PartialEq)]
 pub struct Piece {
     pub idx: u8,
+}
+
+impl Debug for Piece {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?} {:?}", self.colour(), self.kind())
+    }
 }
 
 impl Piece {
