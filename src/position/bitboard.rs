@@ -86,6 +86,14 @@ impl BitBoard {
         self.inner & 1 << loc.to_idx() != 0
     }
 
+    pub const fn clear_piece_at(self, loc: Locus) -> Self {
+        Self::new(self.inner & !(loc.to_bitboard().inner))
+    }
+
+    pub const fn set_piece_at(self, loc: Locus) -> Self {
+        Self::new(self.inner | loc.to_bitboard().inner)
+    }
+
     pub fn iter_pieces(self) -> PiecesIterator {
         PiecesIterator { bb: self, shift: 0 }
     }
@@ -190,5 +198,11 @@ mod tests {
             assert!(!b.has_piece_at(Locus::from_rank_file(Rank::Seven, file)));
             assert!(!b.has_piece_at(Locus::from_rank_file(Rank::Eight, file)));
         }
+    }
+
+    #[test]
+    fn clear_piece() {
+        let b = BitBoard { inner: 0b1000101 };
+        assert_eq!(b.clear_piece_at(loc!(C, One)).inner, 0b1000001);
     }
 }
