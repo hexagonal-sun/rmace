@@ -5,9 +5,13 @@ use std::{
 
 use bitboard::BitBoard;
 use locus::{loc, File, Locus, Rank};
+use movegen::knight::calc_knight_moves;
 use strum::{EnumCount, IntoEnumIterator};
 
-use crate::piece::{mkp, Colour, Piece, PieceKind};
+use crate::{
+    mmove::{Move, PieceMove},
+    piece::{mkp, Colour, Piece, PieceKind, PieceKindIter},
+};
 
 pub mod bitboard;
 pub mod locus;
@@ -37,8 +41,40 @@ impl Position {
         None
     }
 
-    pub fn movegen(&self) -> Vec<Position> {
-        todo!()
+    pub fn blockers(&self) -> BitBoard {
+        let mut b = BitBoard::empty();
+
+        for bb in self.bboards.iter() {
+            b = b.or(*bb);
+        }
+
+        b
+    }
+
+    pub fn movegen(&self) -> Vec<Move> {
+        let mut ret = Vec::new();
+
+        ret.append(&mut calc_knight_moves(&self));
+
+        ret
+    }
+
+    fn apply_piece_move(&mut self, pmove: PieceMove) {
+        self[pmove.piece] = self[pmove.piece]
+            .clear_piece_at(pmove.src)
+            .set_piece_at(pmove.dst);
+    }
+
+    pub fn make_move(&mut self, mmove: Move) {
+        match mmove {
+            Move::Move(m) => self.apply_piece_move(m),
+            Move::Attack(m, fallen) => {
+                self.apply_piece_move(m);
+                self[fallen] = self[fallen].clear_piece_at(m.dst);
+            }
+        }
+
+        self.to_play = self.to_play.next();
     }
 
     pub fn empty() -> Self {
@@ -46,6 +82,29 @@ impl Position {
             bboards: [BitBoard::empty(); PieceKind::COUNT * 2],
             to_play: Colour::White,
         }
+    }
+
+    pub fn iter_opponent_bbds(&self) -> OpponentBbIter {
+        OpponentBbIter {
+            pos: &self,
+            p: PieceKind::iter(),
+        }
+    }
+}
+
+pub struct OpponentBbIter<'a> {
+    pos: &'a Position,
+    p: PieceKindIter,
+}
+
+impl Iterator for OpponentBbIter<'_> {
+    type Item = (Piece, BitBoard);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let kind = self.p.next()?;
+        let piece = Piece::new(kind, self.pos.to_play.next());
+
+        Some((piece, self.pos[piece]))
     }
 }
 
@@ -78,13 +137,13 @@ impl Index<Piece> for Position {
     type Output = BitBoard;
 
     fn index(&self, index: Piece) -> &Self::Output {
-        self.bboards.index(index.idx)
+        self.bboards.index(index.idx as usize)
     }
 }
 
 impl IndexMut<Piece> for Position {
     fn index_mut(&mut self, index: Piece) -> &mut Self::Output {
-        self.bboards.index_mut(index.idx)
+        self.bboards.index_mut(index.idx as usize)
     }
 }
 
