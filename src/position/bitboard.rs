@@ -82,7 +82,7 @@ impl BitBoard {
         }
     }
 
-    pub fn has_piece_at(self, loc: Locus) -> bool {
+    pub const fn has_piece_at(self, loc: Locus) -> bool {
         self.inner & 1 << loc.to_idx() != 0
     }
 
