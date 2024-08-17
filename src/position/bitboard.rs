@@ -108,13 +108,12 @@ impl Iterator for PiecesIterator {
     type Item = Locus;
 
     fn next(&mut self) -> Option<Self::Item> {
-        dbg!(self.bb.inner);
-        let x = dbg!(self.bb.inner.trailing_zeros());
+        let x = self.bb.inner.trailing_zeros();
 
         let locus = Locus::from_idx(self.shift as u8 + x as u8)?;
 
         if x < 63 {
-            self.bb.inner >>= dbg!(x + 1);
+            self.bb.inner >>= x + 1;
         } else {
             self.bb.inner = 0;
         }
