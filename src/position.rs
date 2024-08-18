@@ -129,7 +129,7 @@ impl Display for Position {
                         .unwrap_or(". ".to_string())
                 )?;
             }
-            write!(f, "\n")?;
+            writeln!(f)?;
         }
 
         write!(f, "  ")?;

@@ -48,7 +48,7 @@ impl Display for BitBoard {
                 )?;
             }
 
-            write!(f, "\n")?;
+            writeln!(f)?;
         }
 
         write!(f, "  ")?;
