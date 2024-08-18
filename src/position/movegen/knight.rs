@@ -90,9 +90,7 @@ mod tests {
     use crate::{
         mmove::MoveBuilder,
         piece::mkp,
-        position::{
-            builder::PositionBuilder, locus::loc,
-        },
+        position::{builder::PositionBuilder, locus::loc},
     };
 
     #[test]
