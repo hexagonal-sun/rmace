@@ -5,15 +5,15 @@ use std::{
 
 use bitboard::BitBoard;
 use locus::{loc, File, Locus, Rank};
-use movegen::knight::calc_knight_moves;
 use strum::{EnumCount, IntoEnumIterator};
 
 use crate::{
-    mmove::{Move, PieceMove},
+    mmove::Move,
     piece::{mkp, Colour, Piece, PieceKind, PieceKindIter},
 };
 
 pub mod bitboard;
+pub mod builder;
 pub mod locus;
 pub mod movegen;
 
@@ -54,23 +54,30 @@ impl Position {
     pub fn movegen(&self) -> Vec<Move> {
         let mut ret = Vec::new();
 
-        ret.append(&mut calc_knight_moves(&self));
+        ret.append(&mut self.calc_knight_moves());
 
         ret
     }
 
-    fn apply_piece_move(&mut self, pmove: PieceMove) {
-        self[pmove.piece] = self[pmove.piece]
-            .clear_piece_at(pmove.src)
-            .set_piece_at(pmove.dst);
-    }
-
     pub fn make_move(&mut self, mmove: Move) {
         match mmove {
-            Move::Move(m) => self.apply_piece_move(m),
-            Move::Attack(m, fallen) => {
-                self.apply_piece_move(m);
-                self[fallen] = self[fallen].clear_piece_at(m.dst);
+            Move::Move {
+                piece,
+                src,
+                dst,
+                capture,
+                promote,
+            } => {
+                self[piece] = self[piece].clear_piece_at(src).set_piece_at(dst);
+
+                if let Some(fallen) = capture {
+                    self[fallen] = self[fallen].clear_piece_at(dst);
+                }
+
+                if let Some(promotion) = promote {
+                    self[piece] = self[piece].clear_piece_at(dst);
+                    self[promotion] = self[promotion].set_piece_at(dst);
+                }
             }
         }
 
