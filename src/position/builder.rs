@@ -25,7 +25,7 @@ impl PositionBuilder {
         self
     }
 
-    pub fn with_piece_at(mut self, p: Piece, l: Locus) -> Self {
+    pub fn with_piece_at(self, p: Piece, l: Locus) -> Self {
         let bb = self.pos[p].set_piece_at(l);
 
         self.with_piece_board(p, bb)

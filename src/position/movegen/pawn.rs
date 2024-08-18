@@ -1,6 +1,6 @@
 use crate::{
     mmove::{HasDst, Move, MoveBuilder},
-    piece::{mkp, Colour, Piece, PieceKind},
+    piece::{Colour, Piece, PieceKind},
     position::{
         bitboard::BitBoard,
         locus::{Locus, Rank},
