@@ -55,6 +55,7 @@ impl Position {
         let mut ret = Vec::new();
 
         ret.append(&mut self.calc_knight_moves());
+        ret.append(&mut self.calc_pawn_moves());
 
         ret
     }
