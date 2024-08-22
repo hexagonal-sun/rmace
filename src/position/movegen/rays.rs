@@ -162,58 +162,58 @@ mod tests {
     }
 
     mk_test!(north, calc_n_ray_moves,
-             src=loc!(C, Two),
-             blocker=loc!(C, Six),
-             moves=loc!(C, Three); loc!(C, Four); loc!(C, Five); loc!(C, Six),
-             blockers=loc!(C, Six); loc!(D, Four); loc!(C, Four); loc!(C, Five),
-             moves=loc!(C, Three); loc!(C, Four));
+             src=loc!(c 2),
+             blocker=loc!(c 6),
+             moves=loc!(c 3); loc!(c 4); loc!(c 5); loc!(c 6),
+             blockers=loc!(c 6); loc!(d 4); loc!(c 4); loc!(c 5),
+             moves=loc!(c 3); loc!(c 4));
 
     mk_test!(north_east, calc_ne_ray_moves,
-             src=loc!(C, Two),
-             blocker=loc!(F, Five),
-             moves=loc!(D, Three); loc!(E, Four); loc!(F, Five),
-             blockers=loc!(E, Four); loc!(G, Six); loc!(C, Four); loc!(C, Five),
-             moves=loc!(D, Three); loc!(E, Four));
+             src=loc!(c 2),
+             blocker=loc!(f 5),
+             moves=loc!(d 3); loc!(e 4); loc!(f 5),
+             blockers=loc!(e 4); loc!(g 6); loc!(c 4); loc!(c 5),
+             moves=loc!(d 3); loc!(e 4));
 
     mk_test!(east, calc_e_ray_moves,
-             src=loc!(B, Two),
-             blocker=loc!(F, Two),
-             moves=loc!(C, Two); loc!(D, Two); loc!(E, Two); loc!(F, Two),
-             blockers=loc!(D, Two); loc!(G, Six); loc!(F, Two); loc!(G, Two),
-             moves=loc!(C, Two); loc!(D, Two));
+             src=loc!(b 2),
+             blocker=loc!(f 2),
+             moves=loc!(c 2); loc!(d 2); loc!(e 2); loc!(f 2),
+             blockers=loc!(d 2); loc!(g 6); loc!(f 2); loc!(g 2),
+             moves=loc!(c 2); loc!(d 2));
 
     mk_test!(south_east, calc_se_ray_moves,
-             src=loc!(B, Seven),
-             blocker=loc!(E, Four),
-             moves=loc!(C, Six); loc!(D, Five); loc!(E, Four),
-             blockers=loc!(F, Three); loc!(D, Five); loc!(F, Two); loc!(G, Two),
-             moves=loc!(C, Six); loc!(D, Five));
+             src=loc!(b 7),
+             blocker=loc!(e 4),
+             moves=loc!(c 6); loc!(d 5); loc!(e 4),
+             blockers=loc!(f 3); loc!(d 5); loc!(f 2); loc!(g 2),
+             moves=loc!(c 6); loc!(d 5));
 
     mk_test!(south, calc_s_ray_moves,
-             src=loc!(B, Seven),
-             blocker=loc!(B, Four),
-             moves=loc!(B, Six); loc!(B, Five); loc!(B, Four),
-             blockers=loc!(B, Four); loc!(B, Two); loc!(F, Two); loc!(G, Two),
-             moves=loc!(B, Six); loc!(B, Five); loc!(B, Four));
+             src=loc!(b 7),
+             blocker=loc!(b 4),
+             moves=loc!(b 6); loc!(b 5); loc!(b 4),
+             blockers=loc!(b 4); loc!(b 2); loc!(f 2); loc!(g 2),
+             moves=loc!(b 6); loc!(b 5); loc!(b 4));
 
     mk_test!(south_west, calc_sw_ray_moves,
-             src=loc!(G, Seven),
-             blocker=loc!(D, Four),
-             moves=loc!(F, Six); loc!(E, Five); loc!(D, Four),
-             blockers=loc!(E, Five); loc!(C, Three); loc!(F, Two); loc!(G, Two),
-             moves=loc!(F, Six); loc!(E, Five));
+             src=loc!(g 7),
+             blocker=loc!(d 4),
+             moves=loc!(f 6); loc!(e 5); loc!(d 4),
+             blockers=loc!(e 5); loc!(c 3); loc!(f 2); loc!(g 2),
+             moves=loc!(f 6); loc!(e 5));
 
     mk_test!(west, calc_w_ray_moves,
-             src=loc!(G, Seven),
-             blocker=loc!(D, Seven),
-             moves=loc!(F, Seven); loc!(E, Seven); loc!(D, Seven),
-             blockers=loc!(E, Seven); loc!(C, Seven); loc!(F, Two); loc!(G, Two),
-             moves=loc!(F, Seven); loc!(E, Seven));
+             src=loc!(g 7),
+             blocker=loc!(d 7),
+             moves=loc!(f 7); loc!(e 7); loc!(d 7),
+             blockers=loc!(e 7); loc!(c 7); loc!(f 2); loc!(g 2),
+             moves=loc!(f 7); loc!(e 7));
 
     mk_test!(north_west, calc_nw_ray_moves,
-             src=loc!(G, Two),
-             blocker=loc!(D, Five),
-             moves=loc!(F, Three); loc!(E, Four); loc!(D, Five),
-             blockers=loc!(E, Four); loc!(C, Six); loc!(F, Two),
-             moves=loc!(F, Three); loc!(E, Four));
+             src=loc!(g 2),
+             blocker=loc!(d 5),
+             moves=loc!(f 3); loc!(e 4); loc!(d 5),
+             blockers=loc!(e 4); loc!(c 6); loc!(f 2),
+             moves=loc!(f 3); loc!(e 4));
 }

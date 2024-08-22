@@ -173,10 +173,10 @@ impl Default for Position {
             .with_piece_board(mkp!(Black, Knight), BitBoard::new(knights << 56))
             .with_piece_board(mkp!(White, Bishop), BitBoard::new(bishops))
             .with_piece_board(mkp!(Black, Bishop), BitBoard::new(bishops << 56))
-            .with_piece_board(mkp!(White, King), loc!(E, One).to_bitboard())
-            .with_piece_board(mkp!(Black, King), loc!(E, Eight).to_bitboard())
-            .with_piece_board(mkp!(White, Queen), loc!(D, One).to_bitboard())
-            .with_piece_board(mkp!(Black, Queen), loc!(D, Eight).to_bitboard())
+            .with_piece_board(mkp!(White, King), loc!(e 1).to_bitboard())
+            .with_piece_board(mkp!(Black, King), loc!(e 8).to_bitboard())
+            .with_piece_board(mkp!(White, Queen), loc!(d 1).to_bitboard())
+            .with_piece_board(mkp!(Black, Queen), loc!(d 8).to_bitboard())
             .build()
     }
 }

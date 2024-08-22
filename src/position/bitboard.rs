@@ -178,38 +178,38 @@ mod tests {
         b.inner |= 0x8000000000000000;
 
         let mut iter = b.iter_pieces();
-        assert_eq!(iter.next(), Some(loc!(A, One)));
-        assert_eq!(iter.next(), Some(loc!(C, One)));
-        assert_eq!(iter.next(), Some(loc!(F, One)));
-        assert_eq!(iter.next(), Some(loc!(H, One)));
-        assert_eq!(iter.next(), Some(loc!(A, Two)));
-        assert_eq!(iter.next(), Some(loc!(H, Two)));
-        assert_eq!(iter.next(), Some(loc!(A, Three)));
-        assert_eq!(iter.next(), Some(loc!(H, Eight)));
+        assert_eq!(iter.next(), Some(loc!(a 1)));
+        assert_eq!(iter.next(), Some(loc!(c 1)));
+        assert_eq!(iter.next(), Some(loc!(f 1)));
+        assert_eq!(iter.next(), Some(loc!(h 1)));
+        assert_eq!(iter.next(), Some(loc!(a 2)));
+        assert_eq!(iter.next(), Some(loc!(h 2)));
+        assert_eq!(iter.next(), Some(loc!(a 3)));
+        assert_eq!(iter.next(), Some(loc!(h 8)));
         assert_eq!(iter.next(), None);
     }
 
     #[test]
     fn piece_at() {
         let b = BitBoard { inner: 0b1 };
-        assert!(b.has_piece_at(loc!(A, One)));
-        assert!(!b.has_piece_at(loc!(A, Two)));
-        assert!(!b.has_piece_at(loc!(E, Four)));
+        assert!(b.has_piece_at(loc!(a 1)));
+        assert!(!b.has_piece_at(loc!(a 2)));
+        assert!(!b.has_piece_at(loc!(e 4)));
 
         let b = BitBoard { inner: 0b10 };
-        assert!(!b.has_piece_at(loc!(A, One)));
-        assert!(!b.has_piece_at(loc!(E, Four)));
-        assert!(b.has_piece_at(loc!(B, One)));
+        assert!(!b.has_piece_at(loc!(a 1)));
+        assert!(!b.has_piece_at(loc!(e 4)));
+        assert!(b.has_piece_at(loc!(b 1)));
 
         let b = BitBoard { inner: 0b1000101 };
-        assert!(b.has_piece_at(loc!(A, One)));
-        assert!(!b.has_piece_at(loc!(B, One)));
-        assert!(b.has_piece_at(loc!(C, One)));
-        assert!(!b.has_piece_at(loc!(D, One)));
-        assert!(!b.has_piece_at(loc!(E, One)));
-        assert!(!b.has_piece_at(loc!(F, One)));
-        assert!(b.has_piece_at(loc!(G, One)));
-        assert!(!b.has_piece_at(loc!(H, One)));
+        assert!(b.has_piece_at(loc!(a 1)));
+        assert!(!b.has_piece_at(loc!(b 1)));
+        assert!(b.has_piece_at(loc!(c 1)));
+        assert!(!b.has_piece_at(loc!(d 1)));
+        assert!(!b.has_piece_at(loc!(e 1)));
+        assert!(!b.has_piece_at(loc!(f 1)));
+        assert!(b.has_piece_at(loc!(g 1)));
+        assert!(!b.has_piece_at(loc!(h 1)));
 
         for file in File::iter() {
             assert!(!b.has_piece_at(Locus::from_rank_file(Rank::Two, file)));
@@ -225,7 +225,7 @@ mod tests {
     #[test]
     fn clear_piece() {
         let b = BitBoard { inner: 0b1000101 };
-        assert_eq!(b.clear_piece_at(loc!(C, One)).inner, 0b1000001);
+        assert_eq!(b.clear_piece_at(loc!(c 1)).inner, 0b1000001);
     }
 
     #[test]

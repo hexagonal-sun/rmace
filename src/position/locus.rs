@@ -4,16 +4,72 @@ use strum::EnumIter;
 
 use super::BitBoard;
 
+macro_rules! rank {
+    (1) => {
+        crate::position::locus::Rank::One
+    };
+    (2) => {
+        crate::position::locus::Rank::Two
+    };
+    (3) => {
+        crate::position::locus::Rank::Three
+    };
+    (4) => {
+        crate::position::locus::Rank::Four
+    };
+    (5) => {
+        crate::position::locus::Rank::Five
+    };
+    (6) => {
+        crate::position::locus::Rank::Six
+    };
+    (7) => {
+        crate::position::locus::Rank::Seven
+    };
+    (8) => {
+        crate::position::locus::Rank::Eight
+    };
+}
+
+macro_rules! file {
+    (a) => {
+        crate::position::locus::File::A
+    };
+    (b) => {
+        crate::position::locus::File::B
+    };
+    (c) => {
+        crate::position::locus::File::C
+    };
+    (d) => {
+        crate::position::locus::File::D
+    };
+    (e) => {
+        crate::position::locus::File::E
+    };
+    (f) => {
+        crate::position::locus::File::F
+    };
+    (g) => {
+        crate::position::locus::File::G
+    };
+    (h) => {
+        crate::position::locus::File::H
+    };
+}
+
 macro_rules! loc {
-    ($file:ident, $rank:ident) => {
+    ($file:ident $rank:tt) => {
         crate::position::locus::Locus::from_rank_file(
-            crate::position::locus::Rank::$rank,
-            crate::position::locus::File::$file,
+            crate::position::locus::rank!($rank),
+            crate::position::locus::file!($file),
         )
     };
 }
 
+pub(crate) use file;
 pub(crate) use loc;
+pub(crate) use rank;
 
 #[derive(PartialEq, Clone, Copy)]
 pub struct Locus {

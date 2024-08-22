@@ -225,7 +225,7 @@ mod tests {
 
     #[test]
     fn home_rank_moves() {
-        let src = loc!(B, Two);
+        let src = loc!(b 2);
         let piece = mkp!(White, Pawn);
         let p = PositionBuilder::new()
             .with_piece_at(piece, src)
@@ -236,11 +236,11 @@ mod tests {
 
         assert_eq!(moves.len(), 2);
 
-        for l in [loc!(B, Three), loc!(B, Four)] {
+        for l in [loc!(b 3), loc!(b 4)] {
             assert!(moves.contains(&mgen.with_dst(l).build()));
         }
 
-        let src = loc!(D, Seven);
+        let src = loc!(d 7);
         let piece = mkp!(Black, Pawn);
         let p = PositionBuilder::new()
             .with_piece_at(piece, src)
@@ -251,7 +251,7 @@ mod tests {
 
         assert_eq!(moves.len(), 2);
 
-        for l in [loc!(D, Six), loc!(D, Five)] {
+        for l in [loc!(d 6), loc!(d 5)] {
             assert!(moves.contains(&mgen.with_dst(l).build()));
         }
     }
@@ -259,8 +259,8 @@ mod tests {
     #[test]
     fn opponent_blocks() {
         let p = PositionBuilder::new()
-            .with_piece_at(mkp!(White, Pawn), loc!(B, Four))
-            .with_piece_at(mkp!(Black, Knight), loc!(B, Five))
+            .with_piece_at(mkp!(White, Pawn), loc!(b 4))
+            .with_piece_at(mkp!(Black, Knight), loc!(b 5))
             .with_next_turn(Colour::White)
             .build();
         let moves = p.calc_pawn_moves();
@@ -270,7 +270,7 @@ mod tests {
 
     #[test]
     fn standard_moves() {
-        let src = loc!(B, Four);
+        let src = loc!(b 4);
         let piece = mkp!(White, Pawn);
         let p = PositionBuilder::new()
             .with_piece_at(piece, src)
@@ -279,9 +279,9 @@ mod tests {
         let moves = p.calc_pawn_moves();
 
         assert_eq!(moves.len(), 1);
-        assert!(moves.contains(&MoveBuilder::new(piece, src).with_dst(loc!(B, Five)).build()));
+        assert!(moves.contains(&MoveBuilder::new(piece, src).with_dst(loc!(b 5)).build()));
 
-        let src = loc!(D, Five);
+        let src = loc!(d 5);
         let piece = mkp!(Black, Pawn);
         let p = PositionBuilder::new()
             .with_piece_at(piece, src)
@@ -290,50 +290,50 @@ mod tests {
         let moves = p.calc_pawn_moves();
 
         assert_eq!(moves.len(), 1);
-        assert!(moves.contains(&MoveBuilder::new(piece, src).with_dst(loc!(D, Four)).build()));
+        assert!(moves.contains(&MoveBuilder::new(piece, src).with_dst(loc!(d 4)).build()));
     }
 
     #[test]
     fn attacks() {
-        let src = loc!(B, Four);
+        let src = loc!(b 4);
         let piece = mkp!(White, Pawn);
         let p = PositionBuilder::new()
             .with_piece_at(piece, src)
-            .with_piece_at(mkp!(Black, Pawn), loc!(A, Five))
-            .with_piece_at(mkp!(Black, Pawn), loc!(C, Five))
+            .with_piece_at(mkp!(Black, Pawn), loc!(a 5))
+            .with_piece_at(mkp!(Black, Pawn), loc!(c 5))
             .with_next_turn(Colour::White)
             .build();
         let moves = p.calc_pawn_moves();
         let mgen = MoveBuilder::new(piece, src);
 
         assert_eq!(moves.len(), 3);
-        assert!(moves.contains(&mgen.with_dst(loc!(B, Five)).build()));
+        assert!(moves.contains(&mgen.with_dst(loc!(b 5)).build()));
 
-        for l in [loc!(A, Five), loc!(C, Five)] {
+        for l in [loc!(a 5), loc!(c 5)] {
             assert!(moves.contains(&mgen.with_dst(l).with_capture(mkp!(Black, Pawn)).build()));
         }
 
-        let src = loc!(D, Five);
+        let src = loc!(d 5);
         let piece = mkp!(Black, Pawn);
         let p = PositionBuilder::new()
             .with_piece_at(piece, src)
-            .with_piece_at(mkp!(White, Pawn), loc!(C, Four))
-            .with_piece_at(mkp!(White, Pawn), loc!(E, Four))
+            .with_piece_at(mkp!(White, Pawn), loc!(c 4))
+            .with_piece_at(mkp!(White, Pawn), loc!(e 4))
             .with_next_turn(Colour::Black)
             .build();
         let moves = p.calc_pawn_moves();
         let mgen = MoveBuilder::new(piece, src);
 
         assert_eq!(moves.len(), 3);
-        assert!(moves.contains(&mgen.with_dst(loc!(D, Four)).build()));
-        for l in [loc!(C, Four), loc!(E, Four)] {
+        assert!(moves.contains(&mgen.with_dst(loc!(d 4)).build()));
+        for l in [loc!(c 4), loc!(e 4)] {
             assert!(moves.contains(&mgen.with_dst(l).with_capture(mkp!(White, Pawn)).build()));
         }
     }
 
     #[test]
     fn promotions() {
-        let src = loc!(B, Seven);
+        let src = loc!(b 7);
         let piece = mkp!(White, Pawn);
         let p = PositionBuilder::new()
             .with_piece_at(piece, src)
@@ -345,13 +345,13 @@ mod tests {
         for k in PROMOTION_KINDS {
             assert!(moves.contains(
                 &MoveBuilder::new(piece, src)
-                    .with_dst(loc!(B, Eight))
+                    .with_dst(loc!(b 8))
                     .with_pawn_promotion(Piece::new(k, Colour::White))
                     .build()
             ));
         }
 
-        let src = loc!(D, Two);
+        let src = loc!(d 2);
         let piece = mkp!(Black, Pawn);
         let p = PositionBuilder::new()
             .with_piece_at(piece, src)
@@ -363,7 +363,7 @@ mod tests {
         for k in PROMOTION_KINDS {
             assert!(moves.contains(
                 &MoveBuilder::new(piece, src)
-                    .with_dst(loc!(D, One))
+                    .with_dst(loc!(d 1))
                     .with_pawn_promotion(Piece::new(k, Colour::Black))
                     .build()
             ));

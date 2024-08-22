@@ -95,7 +95,7 @@ mod tests {
 
     #[test]
     fn simple() {
-        let src = loc!(D, Four);
+        let src = loc!(d 4);
         let piece = mkp!(White, Knight);
         let p = PositionBuilder::new().with_piece_at(piece, src).build();
         let moves = p.calc_knight_moves();
@@ -103,14 +103,14 @@ mod tests {
 
         assert_eq!(moves.len(), 8);
         for l in [
-            loc!(E, Six),
-            loc!(F, Five),
-            loc!(F, Three),
-            loc!(E, Two),
-            loc!(C, Two),
-            loc!(B, Three),
-            loc!(B, Five),
-            loc!(C, Six),
+            loc!(e 6),
+            loc!(f 5),
+            loc!(f 3),
+            loc!(e 2),
+            loc!(c 2),
+            loc!(b 3),
+            loc!(b 5),
+            loc!(c 6),
         ] {
             assert!(moves.contains(&mgen.with_dst(l).build()));
         }
@@ -118,24 +118,24 @@ mod tests {
 
     #[test]
     fn blockers() {
-        let src = loc!(D, Four);
+        let src = loc!(d 4);
         let piece = mkp!(White, Knight);
         let p = PositionBuilder::new()
             .with_piece_at(piece, src)
-            .with_piece_at(mkp!(White, Pawn), loc!(C, Two))
-            .with_piece_at(mkp!(White, Pawn), loc!(F, Three))
+            .with_piece_at(mkp!(White, Pawn), loc!(c 2))
+            .with_piece_at(mkp!(White, Pawn), loc!(f 3))
             .build();
         let moves = p.calc_knight_moves();
         let mgen = MoveBuilder::new(piece, src);
 
         assert_eq!(moves.len(), 6);
         for l in [
-            loc!(E, Six),
-            loc!(F, Five),
-            loc!(E, Two),
-            loc!(B, Three),
-            loc!(B, Five),
-            loc!(C, Six),
+            loc!(e 6),
+            loc!(f 5),
+            loc!(e 2),
+            loc!(b 3),
+            loc!(b 5),
+            loc!(c 6),
         ] {
             assert!(moves.contains(&mgen.with_dst(l).build()))
         }
@@ -143,29 +143,29 @@ mod tests {
 
     #[test]
     fn attacks() {
-        let src = loc!(D, Four);
+        let src = loc!(d 4);
         let piece = mkp!(White, Knight);
         let p = PositionBuilder::new()
             .with_piece_at(piece, src)
-            .with_piece_at(mkp!(Black, Pawn), loc!(C, Two))
-            .with_piece_at(mkp!(Black, Pawn), loc!(F, Three))
+            .with_piece_at(mkp!(Black, Pawn), loc!(c 2))
+            .with_piece_at(mkp!(Black, Pawn), loc!(f 3))
             .build();
         let moves = p.calc_knight_moves();
         let mgen = MoveBuilder::new(piece, src);
 
         assert_eq!(moves.len(), 8);
         for l in [
-            loc!(E, Six),
-            loc!(F, Five),
-            loc!(E, Two),
-            loc!(B, Three),
-            loc!(B, Five),
-            loc!(C, Six),
+            loc!(e 6),
+            loc!(f 5),
+            loc!(e 2),
+            loc!(b 3),
+            loc!(b 5),
+            loc!(c 6),
         ] {
             assert!(moves.contains(&mgen.with_dst(l).build()));
         }
 
-        for l in [loc!(C, Two), loc!(F, Three)] {
+        for l in [loc!(c 2), loc!(f 3)] {
             assert!(moves.contains(&mgen.with_dst(l).with_capture(mkp!(Black, Pawn)).build()));
         }
     }
