@@ -1,2 +1,3 @@
 pub mod knight;
 pub mod pawn;
+mod rays;
