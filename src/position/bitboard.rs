@@ -7,7 +7,7 @@ use strum::IntoEnumIterator;
 
 use super::locus::{File, Locus, Rank};
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 #[repr(transparent)]
 pub struct BitBoard {
     inner: u64,
@@ -69,6 +69,19 @@ impl BitBoard {
         Self { inner: 0 }
     }
 
+    pub const fn is_empty(self) -> bool {
+        self.inner == 0
+    }
+
+    pub const fn first_idx_fwd(self) -> u32 {
+        self.inner.trailing_zeros()
+    }
+
+    pub const fn first_idx_rev(self) -> u32 {
+        63 - self.inner.leading_zeros()
+    }
+
+    // Until https://github.com/rust-lang/rust/issues/90080 is stablised
     pub const fn or(self, other: Self) -> Self {
         Self {
             inner: self.inner | other.inner,
@@ -80,6 +93,16 @@ impl BitBoard {
             Some(bb) => self.or(bb),
             None => self,
         }
+    }
+
+    pub const fn and(self, other: Self) -> Self {
+        Self {
+            inner: self.inner & other.inner,
+        }
+    }
+
+    pub const fn not(self) -> Self {
+        Self { inner: !self.inner }
     }
 
     pub const fn has_piece_at(self, loc: Locus) -> bool {
@@ -203,5 +226,27 @@ mod tests {
     fn clear_piece() {
         let b = BitBoard { inner: 0b1000101 };
         assert_eq!(b.clear_piece_at(loc!(C, One)).inner, 0b1000001);
+    }
+
+    #[test]
+    fn idx_fwd() {
+        let b = BitBoard { inner: 0b1010100 };
+        assert_eq!(b.first_idx_fwd(), 2);
+
+        let b = BitBoard { inner: 0b101010000 };
+        assert_eq!(b.first_idx_fwd(), 4);
+    }
+
+    #[test]
+    fn idx_rev() {
+        let b = BitBoard {
+            inner: 0b00001010100,
+        };
+        assert_eq!(b.first_idx_rev(), 6);
+
+        let b = BitBoard {
+            inner: 0b000101010000,
+        };
+        assert_eq!(b.first_idx_rev(), 8);
     }
 }
