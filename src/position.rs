@@ -4,6 +4,7 @@ use std::{
 };
 
 use bitboard::BitBoard;
+use builder::PositionBuilder;
 use locus::{loc, File, Locus, Rank};
 use strum::{EnumCount, IntoEnumIterator};
 
@@ -157,26 +158,25 @@ impl IndexMut<Piece> for Position {
 
 impl Default for Position {
     fn default() -> Self {
-        let mut pos = Self::empty();
-
         let pawns = 0b11111111;
         let rooks = 0b10000001;
         let knights = 0b01000010;
         let bishops = 0b00100100;
 
-        pos[mkp!(White, Pawn)] = BitBoard::new(pawns << 8);
-        pos[mkp!(Black, Pawn)] = BitBoard::new(pawns << 48);
-        pos[mkp!(White, Rook)] = BitBoard::new(rooks);
-        pos[mkp!(Black, Rook)] = BitBoard::new(rooks << 56);
-        pos[mkp!(White, Knight)] = BitBoard::new(knights);
-        pos[mkp!(Black, Knight)] = BitBoard::new(knights << 56);
-        pos[mkp!(White, Bishop)] = BitBoard::new(bishops);
-        pos[mkp!(Black, Bishop)] = BitBoard::new(bishops << 56);
-        pos[mkp!(White, King)] = loc!(E, One).to_bitboard();
-        pos[mkp!(Black, King)] = loc!(E, Eight).to_bitboard();
-        pos[mkp!(White, Queen)] = loc!(D, One).to_bitboard();
-        pos[mkp!(Black, Queen)] = loc!(D, Eight).to_bitboard();
-
-        pos
+        PositionBuilder::new()
+            .with_next_turn(Colour::White)
+            .with_piece_board(mkp!(White, Pawn), BitBoard::new(pawns << 8))
+            .with_piece_board(mkp!(Black, Pawn), BitBoard::new(pawns << 48))
+            .with_piece_board(mkp!(White, Rook), BitBoard::new(rooks))
+            .with_piece_board(mkp!(Black, Rook), BitBoard::new(rooks << 56))
+            .with_piece_board(mkp!(White, Knight), BitBoard::new(knights))
+            .with_piece_board(mkp!(Black, Knight), BitBoard::new(knights << 56))
+            .with_piece_board(mkp!(White, Bishop), BitBoard::new(bishops))
+            .with_piece_board(mkp!(Black, Bishop), BitBoard::new(bishops << 56))
+            .with_piece_board(mkp!(White, King), loc!(E, One).to_bitboard())
+            .with_piece_board(mkp!(Black, King), loc!(E, Eight).to_bitboard())
+            .with_piece_board(mkp!(White, Queen), loc!(D, One).to_bitboard())
+            .with_piece_board(mkp!(Black, Queen), loc!(D, Eight).to_bitboard())
+            .build()
     }
 }
