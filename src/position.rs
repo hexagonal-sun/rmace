@@ -42,6 +42,16 @@ impl Position {
         None
     }
 
+    pub fn all_pieces_for_colour(&self, colour: Colour) -> BitBoard {
+        let mut b = BitBoard::empty();
+
+        for kind in PieceKind::iter() {
+            b = b | self[Piece::new(kind, colour)];
+        }
+
+        b
+    }
+
     pub fn blockers(&self) -> BitBoard {
         let mut b = BitBoard::empty();
 
@@ -55,8 +65,20 @@ impl Position {
     pub fn movegen(&self) -> Vec<Move> {
         let mut ret = Vec::new();
 
-        ret.append(&mut self.calc_knight_moves());
-        ret.append(&mut self.calc_pawn_moves());
+        for kind in PieceKind::iter() {
+            let piece = Piece::new(kind, self.to_play);
+
+            for src in self[piece].iter_pieces() {
+                ret.append(&mut match kind {
+                    PieceKind::Pawn => self.calc_pawn_moves(src),
+                    PieceKind::Bishop => self.calc_bishop_moves(src),
+                    PieceKind::Knight => self.calc_knight_moves(src),
+                    PieceKind::Queen => self.calc_queen_moves(src),
+                    PieceKind::Rook => self.calc_rook_moves(src),
+                    PieceKind::King => self.calc_king_moves(src),
+                });
+            }
+        }
 
         ret
     }

@@ -1,6 +1,6 @@
 use std::{
     fmt::Display,
-    ops::{BitAnd, Not},
+    ops::{BitAnd, BitOr, Not},
 };
 
 use strum::IntoEnumIterator;
@@ -11,6 +11,16 @@ use super::locus::{File, Locus, Rank};
 #[repr(transparent)]
 pub struct BitBoard {
     inner: u64,
+}
+
+impl BitOr for BitBoard {
+    type Output = Self;
+
+    fn bitor(self, rhs: Self) -> Self::Output {
+        Self {
+            inner: self.inner | rhs.inner,
+        }
+    }
 }
 
 impl BitAnd for BitBoard {

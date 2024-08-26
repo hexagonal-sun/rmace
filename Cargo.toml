@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 num_enum = "0.7.3"
+paste = "1.0.15"
 strum = { version = "0.26", features = ["derive"] }
 
 [dev-dependencies]

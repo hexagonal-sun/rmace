@@ -60,25 +60,21 @@ const fn calc_attack_knight() -> [BitBoard; 64] {
 }
 
 impl Position {
-    pub fn calc_knight_moves(&self) -> Vec<Move> {
+    pub fn calc_knight_moves(&self, src: Locus) -> Vec<Move> {
         let mut ret = Vec::new();
         let piece = Piece::new(PieceKind::Knight, self.to_play);
-        let bb = self[piece];
         let blockers = self.blockers();
+        let mgen = MoveBuilder::new(piece, src);
+        let moves = KNIGHT_MOVES[src.to_idx() as usize];
 
-        for src in bb.iter_pieces() {
-            let mgen = MoveBuilder::new(piece, src);
-            let moves = KNIGHT_MOVES[src.to_idx() as usize];
-
-            for (op, obb) in self.iter_opponent_bbds() {
-                for dst in (moves & obb).iter_pieces() {
-                    ret.push(mgen.with_dst(dst).with_capture(op).build())
-                }
+        for (op, obb) in self.iter_opponent_bbds() {
+            for dst in (moves & obb).iter_pieces() {
+                ret.push(mgen.with_dst(dst).with_capture(op).build())
             }
+        }
 
-            for dst in (moves & !(blockers & moves)).iter_pieces() {
-                ret.push(mgen.with_dst(dst).build())
-            }
+        for dst in (moves & !(blockers & moves)).iter_pieces() {
+            ret.push(mgen.with_dst(dst).build())
         }
 
         ret
@@ -90,83 +86,44 @@ mod tests {
     use crate::{
         mmove::MoveBuilder,
         piece::mkp,
-        position::{builder::PositionBuilder, locus::loc},
+        position::{builder::PositionBuilder, locus::loc, movegen::test::mk_test},
     };
 
-    #[test]
-    fn simple() {
-        let src = loc!(d 4);
-        let piece = mkp!(White, Knight);
-        let p = PositionBuilder::new().with_piece_at(piece, src).build();
-        let moves = p.calc_knight_moves();
-        let mgen = MoveBuilder::new(piece, src);
+    mk_test!(name=simple,
+             calc_fn=calc_knight_moves,
+             kind=Knight,
+             src=loc!(d 4),
+             blockers=;
+             attacks=;
+             moves=loc!(e 6),
+                   loc!(f 5),
+                   loc!(f 3),
+                   loc!(e 2),
+                   loc!(c 2),
+                   loc!(b 3),
+                   loc!(b 5),
+                   loc!(c 6));
 
-        assert_eq!(moves.len(), 8);
-        for l in [
-            loc!(e 6),
-            loc!(f 5),
-            loc!(f 3),
-            loc!(e 2),
-            loc!(c 2),
-            loc!(b 3),
-            loc!(b 5),
-            loc!(c 6),
-        ] {
-            assert!(moves.contains(&mgen.with_dst(l).build()));
-        }
-    }
+    mk_test!(name=blockers,
+             calc_fn=calc_knight_moves,
+             kind=Knight,
+             src=loc!(d 4),
+             blockers=loc!(c 2), loc!(f 3);
+             attacks=;
+             moves=loc!(e 6),
+                   loc!(f 5),
+                   loc!(e 2),
+                   loc!(b 3),
+                   loc!(b 5),
+                   loc!(c 6));
 
-    #[test]
-    fn blockers() {
-        let src = loc!(d 4);
-        let piece = mkp!(White, Knight);
-        let p = PositionBuilder::new()
-            .with_piece_at(piece, src)
-            .with_piece_at(mkp!(White, Pawn), loc!(c 2))
-            .with_piece_at(mkp!(White, Pawn), loc!(f 3))
-            .build();
-        let moves = p.calc_knight_moves();
-        let mgen = MoveBuilder::new(piece, src);
-
-        assert_eq!(moves.len(), 6);
-        for l in [
-            loc!(e 6),
-            loc!(f 5),
-            loc!(e 2),
-            loc!(b 3),
-            loc!(b 5),
-            loc!(c 6),
-        ] {
-            assert!(moves.contains(&mgen.with_dst(l).build()))
-        }
-    }
-
-    #[test]
-    fn attacks() {
-        let src = loc!(d 4);
-        let piece = mkp!(White, Knight);
-        let p = PositionBuilder::new()
-            .with_piece_at(piece, src)
-            .with_piece_at(mkp!(Black, Pawn), loc!(c 2))
-            .with_piece_at(mkp!(Black, Pawn), loc!(f 3))
-            .build();
-        let moves = p.calc_knight_moves();
-        let mgen = MoveBuilder::new(piece, src);
-
-        assert_eq!(moves.len(), 8);
-        for l in [
-            loc!(e 6),
-            loc!(f 5),
-            loc!(e 2),
-            loc!(b 3),
-            loc!(b 5),
-            loc!(c 6),
-        ] {
-            assert!(moves.contains(&mgen.with_dst(l).build()));
-        }
-
-        for l in [loc!(c 2), loc!(f 3)] {
-            assert!(moves.contains(&mgen.with_dst(l).with_capture(mkp!(Black, Pawn)).build()));
-        }
-    }
+    mk_test!(name=attacks,
+             calc_fn=calc_knight_moves,
+             kind=Knight,
+             src=loc!(d 4),
+             blockers=loc!(c 2), loc!(f 3);
+             attacks=loc!(f 5), loc!(b 3), loc!(b 5);
+             moves=loc!(e 6),
+                   loc!(e 2),
+                   loc!(c 6));
 }
