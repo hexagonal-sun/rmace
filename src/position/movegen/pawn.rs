@@ -126,16 +126,16 @@ const fn calc_pawn_move(l: Locus, c: Colour) -> PawnMove {
 const fn calc_pawn_attack(l: Locus, c: Colour) -> PawnMove {
     let mut bb = BitBoard::empty();
     let is_white = c as u8 == Colour::White as u8;
-    let (src_r, _) = l.to_rank_file();
 
-    if src_r as u8 == Rank::One as u8 || src_r as u8 == Rank::Eight as u8 {
+    let m = if is_white { l.north() } else { l.south() };
+    let m = if m.is_none() {
         return PawnMove {
             bb: BitBoard::empty(),
             promotes: false,
         };
-    }
-
-    let m = unwrap!(if is_white { l.north() } else { l.south() });
+    } else {
+        unwrap!(m)
+    };
     let mv_first = m.east();
     let mv_second = m.west();
     let (dst_r, _) = m.to_rank_file();
@@ -207,6 +207,16 @@ impl Position {
         }
         ret
     }
+
+    pub fn loc_attacked_by_pawn(&self, l: Locus, c: Colour) -> bool {
+        let attacks = if c == Colour::White {
+            B_PAWN_ATTACKS[l.to_idx() as usize].bb
+        } else {
+            W_PAWN_ATTACKS[l.to_idx() as usize].bb
+        };
+
+        !(self[Piece::new(PieceKind::Pawn, c)] & attacks).is_empty()
+    }
 }
 
 #[cfg(test)]
@@ -214,8 +224,51 @@ mod tests {
     use crate::{
         mmove::MoveBuilder,
         piece::{mkp, Colour, Piece},
-        position::{builder::PositionBuilder, locus::loc, movegen::pawn::PROMOTION_KINDS},
+        position::{
+            builder::PositionBuilder,
+            locus::{loc, Locus},
+            movegen::pawn::PROMOTION_KINDS,
+            Position,
+        },
     };
+
+    #[test]
+    fn attack_checks_white() {
+        let pos = PositionBuilder::new()
+            .with_piece_at(mkp!(White, Pawn), loc!(c 4))
+            .with_piece_at(mkp!(White, Pawn), loc!(e 6))
+            .with_piece_at(mkp!(White, Pawn), loc!(g 7))
+            .build();
+
+        for loc in Locus::iter_all_squares() {
+            if loc == loc!(b 5)
+                || loc == loc!(d 5)
+                || loc == loc!(d 7)
+                || loc == loc!(f 7)
+                || loc == loc!(f 8)
+                || loc == loc!(h 8)
+            {
+                assert!(pos.loc_attacked_by_pawn(loc, Colour::White))
+            } else {
+                assert!(!pos.loc_attacked_by_pawn(loc, Colour::White))
+            }
+        }
+    }
+
+    #[test]
+    fn attack_checks_black() {
+        let pos = PositionBuilder::new()
+            .with_piece_at(mkp!(Black, Pawn), loc!(c 4))
+            .build();
+
+        for loc in Locus::iter_all_squares() {
+            if loc == loc!(b 3) || loc == loc!(d 3) {
+                assert!(pos.loc_attacked_by_pawn(loc, Colour::Black))
+            } else {
+                assert!(!pos.loc_attacked_by_pawn(loc, Colour::Black))
+            }
+        }
+    }
 
     #[test]
     fn home_rank_moves() {
