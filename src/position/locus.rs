@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use strum::EnumIter;
+use strum::{EnumCount, EnumIter};
 
 use super::BitBoard;
 
@@ -86,7 +86,7 @@ impl Debug for Locus {
     }
 }
 
-#[derive(EnumIter, Clone, Copy, PartialEq)]
+#[derive(EnumIter, Clone, Copy, PartialEq, EnumCount)]
 pub enum Rank {
     One,
     Two,

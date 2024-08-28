@@ -15,6 +15,7 @@ use crate::{
 
 pub mod bitboard;
 pub mod builder;
+pub mod fen;
 pub mod locus;
 pub mod movegen;
 
