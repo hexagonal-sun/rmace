@@ -109,6 +109,31 @@ impl Position {
         self.to_play = self.to_play.next();
     }
 
+    pub fn undo_move(&mut self, mmove: Move) {
+        match mmove {
+            Move::Move {
+                piece,
+                src,
+                dst,
+                capture,
+                promote,
+            } => {
+                if let Some(promotion) = promote {
+                    self[piece] = self[piece].set_piece_at(dst);
+                    self[promotion] = self[promotion].clear_piece_at(dst);
+                }
+
+                if let Some(fallen) = capture {
+                    self[fallen] = self[fallen].set_piece_at(dst);
+                }
+
+                self[piece] = self[piece].set_piece_at(src).clear_piece_at(dst);
+            }
+        }
+
+        self.to_play = self.to_play.next();
+    }
+
     pub fn empty() -> Self {
         Self {
             bboards: [BitBoard::empty(); PieceKind::COUNT * 2],
