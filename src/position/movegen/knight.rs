@@ -1,6 +1,6 @@
 use crate::{
     mmove::{Move, MoveBuilder},
-    piece::{Piece, PieceKind},
+    piece::{Colour, Piece, PieceKind},
     position::{bitboard::BitBoard, locus::Locus, Position},
 };
 
@@ -79,15 +79,49 @@ impl Position {
 
         ret
     }
+
+    pub fn loc_attacked_by_knight(&self, l: Locus, c: Colour) -> bool {
+        !(self[Piece::new(PieceKind::Knight, c)] & KNIGHT_MOVES[l.to_idx() as usize]).is_empty()
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::{
         mmove::MoveBuilder,
-        piece::mkp,
-        position::{builder::PositionBuilder, locus::loc, movegen::test::mk_test},
+        piece::{mkp, Colour},
+        position::{
+            builder::PositionBuilder,
+            locus::{loc, Locus},
+            movegen::test::mk_test,
+        },
     };
+
+    #[test]
+    fn loc_attack() {
+        let pos = PositionBuilder::new()
+            .with_piece_at(mkp!(White, Knight), loc!(c 4))
+            .build();
+
+        let attacked_squares = [
+            loc!(d 6),
+            loc!(e 5),
+            loc!(e 3),
+            loc!(d 2),
+            loc!(b 2),
+            loc!(a 3),
+            loc!(a 5),
+            loc!(b 6),
+        ];
+
+        for loc in Locus::iter_all_squares() {
+            if attacked_squares.contains(&loc) {
+                assert!(pos.loc_attacked_by_knight(loc, Colour::White));
+            } else {
+                assert!(!pos.loc_attacked_by_knight(loc, Colour::White));
+            }
+        }
+    }
 
     mk_test!(name=simple,
              calc_fn=calc_knight_moves,

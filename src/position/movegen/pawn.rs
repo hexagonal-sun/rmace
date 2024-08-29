@@ -233,7 +233,7 @@ mod tests {
     };
 
     #[test]
-    fn attack_checks_white() {
+    fn loc_attack_white() {
         let pos = PositionBuilder::new()
             .with_piece_at(mkp!(White, Pawn), loc!(c 4))
             .with_piece_at(mkp!(White, Pawn), loc!(e 6))
@@ -256,7 +256,7 @@ mod tests {
     }
 
     #[test]
-    fn attack_checks_black() {
+    fn loc_attack_black() {
         let pos = PositionBuilder::new()
             .with_piece_at(mkp!(Black, Pawn), loc!(c 4))
             .build();
