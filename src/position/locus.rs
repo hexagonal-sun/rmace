@@ -1,5 +1,6 @@
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 
+use anyhow::bail;
 use strum::{EnumCount, EnumIter};
 
 use super::BitBoard;
@@ -71,22 +72,20 @@ pub(crate) use file;
 pub(crate) use loc;
 pub(crate) use rank;
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Clone, Copy, Debug)]
 pub struct Locus {
     pos: i8,
 }
 
-impl Debug for Locus {
+impl Display for Locus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let (rank, file) = self.to_rank_file();
-        file.fmt(f)?;
-        rank.fmt(f)?;
-
-        Ok(())
+        write!(f, "{}", file)?;
+        write!(f, "{}", rank)
     }
 }
 
-#[derive(EnumIter, Clone, Copy, PartialEq, EnumCount)]
+#[derive(Debug, EnumIter, Clone, Copy, PartialEq, EnumCount)]
 pub enum Rank {
     One,
     Two,
@@ -98,7 +97,7 @@ pub enum Rank {
     Eight,
 }
 
-impl Debug for Rank {
+impl Display for Rank {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::One => write!(f, "1"),
@@ -110,6 +109,22 @@ impl Debug for Rank {
             Self::Seven => write!(f, "7"),
             Self::Eight => write!(f, "8"),
         }
+    }
+}
+
+impl TryFrom<u32> for Rank {
+    type Error = anyhow::Error;
+
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
+        if value < 1 {
+            bail!("Rank value is too low");
+        }
+
+        if value > 8 {
+            bail!("Rank value is too high");
+        }
+
+        Ok(Rank::from_idx((value - 1) as i8))
     }
 }
 
@@ -139,6 +154,21 @@ pub enum File {
     F,
     G,
     H,
+}
+
+impl Display for File {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::A => write!(f, "a"),
+            Self::B => write!(f, "b"),
+            Self::C => write!(f, "c"),
+            Self::D => write!(f, "d"),
+            Self::E => write!(f, "e"),
+            Self::F => write!(f, "f"),
+            Self::G => write!(f, "g"),
+            Self::H => write!(f, "h"),
+        }
+    }
 }
 
 impl File {

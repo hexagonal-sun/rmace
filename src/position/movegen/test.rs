@@ -22,7 +22,7 @@ macro_rules! mk_test {
             let mut bb = crate::position::bitboard::BitBoard::empty();
 
             for l in calculated_moves.iter() {
-                bb = bb.set_piece_at(l.dst());
+                bb = bb.set_piece_at(l.dst);
             }
 
             println!("{}", bb);

@@ -63,73 +63,36 @@ impl Position {
         b
     }
 
-    pub fn movegen(&self) -> Vec<Move> {
-        let mut ret = Vec::new();
+    pub fn make_move(&mut self, mmove: Move) {
+        self[mmove.piece] = self[mmove.piece]
+            .clear_piece_at(mmove.src)
+            .set_piece_at(mmove.dst);
 
-        for kind in PieceKind::iter() {
-            let piece = Piece::new(kind, self.to_play);
-
-            for src in self[piece].iter_pieces() {
-                ret.append(&mut match kind {
-                    PieceKind::Pawn => self.calc_pawn_moves(src),
-                    PieceKind::Bishop => self.calc_bishop_moves(src),
-                    PieceKind::Knight => self.calc_knight_moves(src),
-                    PieceKind::Queen => self.calc_queen_moves(src),
-                    PieceKind::Rook => self.calc_rook_moves(src),
-                    PieceKind::King => self.calc_king_moves(src),
-                });
-            }
+        if let Some(fallen) = mmove.capture {
+            self[fallen] = self[fallen].clear_piece_at(mmove.dst);
         }
 
-        ret
-    }
-
-    pub fn make_move(&mut self, mmove: Move) {
-        match mmove {
-            Move::Move {
-                piece,
-                src,
-                dst,
-                capture,
-                promote,
-            } => {
-                self[piece] = self[piece].clear_piece_at(src).set_piece_at(dst);
-
-                if let Some(fallen) = capture {
-                    self[fallen] = self[fallen].clear_piece_at(dst);
-                }
-
-                if let Some(promotion) = promote {
-                    self[piece] = self[piece].clear_piece_at(dst);
-                    self[promotion] = self[promotion].set_piece_at(dst);
-                }
-            }
+        if let Some(promotion) = mmove.promote {
+            self[mmove.piece] = self[mmove.piece].clear_piece_at(mmove.dst);
+            self[promotion] = self[promotion].set_piece_at(mmove.dst);
         }
 
         self.to_play = self.to_play.next();
     }
 
     pub fn undo_move(&mut self, mmove: Move) {
-        match mmove {
-            Move::Move {
-                piece,
-                src,
-                dst,
-                capture,
-                promote,
-            } => {
-                if let Some(promotion) = promote {
-                    self[piece] = self[piece].set_piece_at(dst);
-                    self[promotion] = self[promotion].clear_piece_at(dst);
-                }
-
-                if let Some(fallen) = capture {
-                    self[fallen] = self[fallen].set_piece_at(dst);
-                }
-
-                self[piece] = self[piece].set_piece_at(src).clear_piece_at(dst);
-            }
+        if let Some(promotion) = mmove.promote {
+            self[mmove.piece] = self[mmove.piece].set_piece_at(mmove.dst);
+            self[promotion] = self[promotion].clear_piece_at(mmove.dst);
         }
+
+        if let Some(fallen) = mmove.capture {
+            self[fallen] = self[fallen].set_piece_at(mmove.dst);
+        }
+
+        self[mmove.piece] = self[mmove.piece]
+            .set_piece_at(mmove.src)
+            .clear_piece_at(mmove.dst);
 
         self.to_play = self.to_play.next();
     }
