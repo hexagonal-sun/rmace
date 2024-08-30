@@ -196,6 +196,16 @@ impl Position {
             }
         }
 
+        let home_blocker_mask = if self.to_play == Colour::White {
+            BitBoard::new(0xff0000)
+        } else {
+            BitBoard::new(0xff0000000000)
+        };
+
+        if !(moves.bb & blockers & home_blocker_mask).is_empty() {
+            return ret;
+        }
+
         for dst in (moves.bb & !(blockers & moves.bb)).iter_pieces() {
             let b = mgen.with_dst(dst);
 
@@ -228,7 +238,6 @@ mod tests {
             builder::PositionBuilder,
             locus::{loc, Locus},
             movegen::pawn::PROMOTION_KINDS,
-            Position,
         },
     };
 
@@ -301,6 +310,29 @@ mod tests {
         for l in [loc!(d 6), loc!(d 5)] {
             assert!(moves.contains(&mgen.with_dst(l).build()));
         }
+    }
+
+    #[test]
+    fn home_rank_blocks() {
+        let p = PositionBuilder::new()
+            .with_piece_at(mkp!(White, Pawn), loc!(b 2))
+            .with_piece_at(mkp!(Black, Knight), loc!(b 3))
+            .with_piece_at(mkp!(White, Pawn), loc!(e 2))
+            .with_piece_at(mkp!(White, Queen), loc!(e 3))
+            .with_next_turn(Colour::White)
+            .build();
+        assert!(p.calc_pawn_moves(loc!(b 2)).is_empty());
+        assert!(p.calc_pawn_moves(loc!(e 2)).is_empty());
+
+        let p = PositionBuilder::new()
+            .with_piece_at(mkp!(Black, Pawn), loc!(b 7))
+            .with_piece_at(mkp!(White, Knight), loc!(b 6))
+            .with_piece_at(mkp!(Black, Pawn), loc!(e 7))
+            .with_piece_at(mkp!(Black, Queen), loc!(e 6))
+            .with_next_turn(Colour::Black)
+            .build();
+        assert!(p.calc_pawn_moves(loc!(b 7)).is_empty());
+        assert!(p.calc_pawn_moves(loc!(e 7)).is_empty());
     }
 
     #[test]
