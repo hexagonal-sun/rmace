@@ -45,7 +45,7 @@ impl Display for BitBoard {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let b = format!("{:064b}", self.inner).into_bytes();
         for (b, rank) in b.chunks(8).zip(Rank::iter().rev()) {
-            write!(f, "{:?} ", rank)?;
+            write!(f, "{} ", rank)?;
             for v in b.iter().rev() {
                 write!(
                     f,
