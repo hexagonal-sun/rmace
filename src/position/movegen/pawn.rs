@@ -208,7 +208,6 @@ impl Position {
             }
         }
 
-
         if !(moves.bb & blockers & home_blocker_mask).is_empty() {
             return ret;
         }

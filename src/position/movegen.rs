@@ -1,3 +1,5 @@
+use std::thread;
+
 use strum::IntoEnumIterator;
 
 use crate::{
@@ -80,14 +82,22 @@ impl Position {
             n
         }
 
-        let mut ret = Vec::new();
-        for m in self.movegen() {
-            let token = self.make_move(m);
-            ret.push((m, _perft(self, depth - 1)));
-            self.undo_move(token);
-        }
+        let threads: Vec<_> = self
+            .movegen()
+            .into_iter()
+            .map(|m| {
+                let mut pos = self.clone();
+                pos.make_move(m).consume();
+                (m, thread::spawn(move || _perft(&mut pos, depth - 1)))
+            })
+            .collect();
 
-        ret
+        let results: Vec<_> = threads
+            .into_iter()
+            .map(|(m, join)| (m, join.join().unwrap()))
+            .collect();
+
+        results
     }
 }
 
