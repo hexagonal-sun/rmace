@@ -1,6 +1,9 @@
 use std::fmt::Debug;
 
-use crate::{piece::Piece, position::locus::Locus};
+use crate::{
+    piece::{Piece, PieceKind},
+    position::locus::{Locus, Rank},
+};
 
 #[derive(Clone, Copy, PartialEq)]
 pub struct Move {
@@ -9,8 +12,22 @@ pub struct Move {
     pub dst: Locus,
     pub capture: Option<Piece>,
     pub promote: Option<Piece>,
-    // pub en_passant_capture: bool,
-    // pub set_ep: bool,
+    pub set_ep: bool,
+}
+
+impl Move {
+    pub fn ep_loc(self) -> Option<Locus> {
+        if self.set_ep {
+            let (r, _) = self.src.to_rank_file();
+            if r == Rank::Two {
+                self.src.north()
+            } else {
+                self.src.south()
+            }
+        } else {
+            None
+        }
+    }
 }
 
 impl Debug for Move {
@@ -37,6 +54,7 @@ pub struct HasDst {
     dst: Locus,
     promotion: Option<Piece>,
     capture: Option<Piece>,
+    sets_ep: bool,
 }
 
 #[derive(Clone, Copy)]
@@ -65,6 +83,7 @@ impl MoveBuilder<NeedsDst> {
                 dst,
                 promotion: None,
                 capture: None,
+                sets_ep: false,
             },
         }
     }
@@ -78,6 +97,7 @@ impl MoveBuilder<HasDst> {
             dst: self.extra.dst,
             capture: self.extra.capture,
             promote: self.extra.promotion,
+            set_ep: self.extra.sets_ep,
         }
     }
 
@@ -88,6 +108,12 @@ impl MoveBuilder<HasDst> {
 
     pub fn with_pawn_promotion(mut self, piece: Piece) -> Self {
         self.extra.promotion = Some(piece);
+        self
+    }
+
+    pub fn sets_ep(mut self) -> Self {
+        assert_eq!(self.piece.kind(), PieceKind::Pawn);
+        self.extra.sets_ep = true;
         self
     }
 }

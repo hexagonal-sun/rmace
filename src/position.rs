@@ -30,12 +30,15 @@ impl UndoToken {
 #[derive(Clone, PartialEq)]
 struct UndoMove {
     mmove: Move,
+    ep_state: Option<Locus>,
+    ep_capture: Option<Locus>,
 }
 
 #[derive(Clone, PartialEq)]
 pub struct Position {
     bboards: [BitBoard; PieceKind::COUNT * 2],
     to_play: Colour,
+    en_passant: Option<Locus>,
     move_stack: ArrayVec<UndoMove, 256>,
 }
 
@@ -88,6 +91,8 @@ impl Position {
     pub fn make_move(&mut self, mmove: Move) -> UndoToken {
         let mut undo = UndoMove {
             mmove,
+            ep_state: self.en_passant,
+            ep_capture: None,
         };
 
         self[mmove.piece] = self[mmove.piece]
@@ -103,7 +108,34 @@ impl Position {
             self.set_piece_at(promotion, mmove.dst);
         }
 
-        self.to_play = self.to_play().next();
+        if let Some(ep_loc) = self.en_passant {
+            if mmove.dst == ep_loc && mmove.piece.kind() == PieceKind::Pawn {
+                let captured_pawn_colour = self.to_play.next();
+                let captured_piece = Piece::new(PieceKind::Pawn, captured_pawn_colour);
+                let pawn_loc = if captured_pawn_colour == Colour::White {
+                    ep_loc.north().unwrap()
+                } else {
+                    ep_loc.south().unwrap()
+                };
+
+                self.clr_piece_at(captured_piece, pawn_loc);
+                undo.ep_capture = Some(pawn_loc);
+            }
+        }
+
+        if mmove.set_ep {
+            let (r, _) = mmove.src.to_rank_file();
+
+            self.en_passant = Some(if r == Rank::Two {
+                mmove.src.north().unwrap()
+            } else {
+                mmove.src.south().unwrap()
+            });
+        } else {
+            self.en_passant = None;
+        }
+
+        self.to_play = self.to_play.next();
         self.move_stack.push(undo);
 
         UndoToken
@@ -127,17 +159,26 @@ impl Position {
             self.set_piece_at(fallen, mmove.dst);
         }
 
+        if let Some(loc) = undo.ep_capture {
+            self.set_piece_at(
+                Piece::new(PieceKind::Pawn, mmove.piece.colour().next()),
+                loc,
+            )
+        }
+
         self[mmove.piece] = self[mmove.piece]
             .set_piece_at(mmove.src)
             .clear_piece_at(mmove.dst);
 
         self.to_play = self.to_play.next();
+        self.en_passant = undo.ep_state;
     }
 
     pub fn empty() -> Self {
         Self {
             bboards: [BitBoard::empty(); PieceKind::COUNT * 2],
             to_play: Colour::White,
+            en_passant: None,
             move_stack: ArrayVec::new(),
         }
     }
@@ -250,12 +291,66 @@ mod tests {
 
         assert_ne!(pos, Position::default());
 
-        if pos.to_play() == Colour::White {
+        if pos.to_play == Colour::White {
             return;
         }
 
         pos.undo_move(token);
 
         assert_eq!(pos, Position::default());
+    }
+
+    #[test]
+    fn set_en_passant() {
+        let mut pos = Position::default();
+        let mmove = MoveBuilder::new(mkp!(White, Pawn), loc!(e 2))
+            .with_dst(loc!(e 4))
+            .sets_ep()
+            .build();
+
+        pos.make_move(mmove).consume();
+
+        assert_eq!(pos.en_passant.unwrap(), loc!(e 3));
+
+        let token = pos.make_move(
+            MoveBuilder::new(mkp!(Black, Knight), loc!(b 8))
+                .with_dst(loc!(c 6))
+                .build(),
+        );
+
+        assert!(matches!(pos.en_passant, None));
+
+        pos.undo_move(token);
+
+        assert_eq!(pos.en_passant.unwrap(), loc!(e 3));
+    }
+
+    #[test]
+    fn en_passant_capture_undo() {
+        let mut pos =
+            Position::from_fen("rnbqkb1r/pppppppp/5n2/P7/8/8/1PPPPPPP/RNBQKBNR b KQkq - 0 2")
+                .unwrap();
+
+        pos.make_move(
+            MoveBuilder::new(mkp!(Black, Pawn), loc!(b 7))
+                .with_dst(loc!(b 5))
+                .sets_ep()
+                .build(),
+        )
+        .consume();
+
+        let p2 = pos.clone();
+
+        let token = pos.make_move(
+            MoveBuilder::new(mkp!(White, Pawn), loc!(a 5))
+                .with_dst(loc!(b 6))
+                .build(),
+        );
+
+        assert!(!pos[mkp!(Black, Pawn)].has_piece_at(loc!(b 5)));
+
+        pos.undo_move(token);
+
+        assert_eq!(pos, p2);
     }
 }

@@ -202,12 +202,29 @@ impl Position {
             BitBoard::new(0xff0000000000)
         };
 
+        if let Some(ep_loc) = self.en_passant {
+            if attacks.bb.has_piece_at(ep_loc) {
+                ret.push(mgen.with_dst(ep_loc).build())
+            }
+        }
+
+
         if !(moves.bb & blockers & home_blocker_mask).is_empty() {
             return ret;
         }
 
         for dst in (moves.bb & !(blockers & moves.bb)).iter_pieces() {
             let b = mgen.with_dst(dst);
+
+            let (src_rank, _) = src.to_rank_file();
+            let (dst_rank, _) = dst.to_rank_file();
+
+            if (src_rank == Rank::Two && dst_rank == Rank::Four)
+                || (src_rank == Rank::Seven && dst_rank == Rank::Five)
+            {
+                ret.push(b.sets_ep().build());
+                continue;
+            }
 
             if moves.promotes {
                 add_promotions(&mut ret, b, self.to_play);
@@ -238,6 +255,7 @@ mod tests {
             builder::PositionBuilder,
             locus::{loc, Locus},
             movegen::pawn::PROMOTION_KINDS,
+            Position,
         },
     };
 
@@ -291,10 +309,8 @@ mod tests {
         let mgen = MoveBuilder::new(piece, src);
 
         assert_eq!(moves.len(), 2);
-
-        for l in [loc!(b 3), loc!(b 4)] {
-            assert!(moves.contains(&mgen.with_dst(l).build()));
-        }
+        assert!(moves.contains(&mgen.with_dst(loc!(b 3)).build()));
+        assert!(moves.contains(&mgen.with_dst(loc!(b 4)).sets_ep().build()));
 
         let src = loc!(d 7);
         let piece = mkp!(Black, Pawn);
@@ -306,10 +322,8 @@ mod tests {
         let mgen = MoveBuilder::new(piece, src);
 
         assert_eq!(moves.len(), 2);
-
-        for l in [loc!(d 6), loc!(d 5)] {
-            assert!(moves.contains(&mgen.with_dst(l).build()));
-        }
+        assert!(moves.contains(&mgen.with_dst(loc!(d 6)).build()));
+        assert!(moves.contains(&mgen.with_dst(loc!(d 5)).sets_ep().build()));
     }
 
     #[test]
@@ -408,6 +422,22 @@ mod tests {
         for l in [loc!(c 4), loc!(e 4)] {
             assert!(moves.contains(&mgen.with_dst(l).with_capture(mkp!(White, Pawn)).build()));
         }
+    }
+
+    #[test]
+    fn en_passant_capture() {
+        let mut pos =
+            Position::from_fen("rnbqkb1r/pppppppp/5n2/P7/8/8/8/RNBQKBNR b KQkq - 0 2").unwrap();
+
+        pos.make_move(
+            MoveBuilder::new(mkp!(Black, Pawn), loc!(b 7))
+                .with_dst(loc!(b 5))
+                .sets_ep()
+                .build(),
+        )
+        .consume();
+
+        assert_eq!(pos.calc_pawn_moves(loc!(a 5)).len(), 2);
     }
 
     #[test]

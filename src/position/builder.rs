@@ -1,6 +1,12 @@
+use anyhow::{bail, Result};
+
 use crate::piece::{Colour, Piece};
 
-use super::{bitboard::BitBoard, locus::Locus, Position};
+use super::{
+    bitboard::BitBoard,
+    locus::{Locus, Rank},
+    Position,
+};
 
 pub struct PositionBuilder {
     pos: Position,
@@ -29,6 +35,16 @@ impl PositionBuilder {
         let bb = self.pos[p].set_piece_at(l);
 
         self.with_piece_board(p, bb)
+    }
+
+    pub fn with_en_passant(mut self, l: Locus) -> Result<Self> {
+        let (r, _) = l.to_rank_file();
+        if r != Rank::Six && r != Rank::Three {
+            bail!("Invalid rank for en-passant locus")
+        } else {
+            self.pos.en_passant = Some(l);
+            Ok(self)
+        }
     }
 
     pub fn build(self) -> Position {
