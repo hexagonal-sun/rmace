@@ -93,7 +93,7 @@ fn debug(mut moves_made: Vec<BasicMove>, mut pos: Position, depth: u32) -> Resul
                     "Move {} contains differing perft result. Making move.",
                     our_moves.1
                 );
-                pos.make_move(our_moves.0);
+                pos.make_move(our_moves.0).consume();
                 moves_made.push(our_moves.1);
                 return debug(moves_made, pos.clone(), depth - 1);
             }

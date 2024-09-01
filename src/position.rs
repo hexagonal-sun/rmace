@@ -3,6 +3,7 @@ use std::{
     ops::{Index, IndexMut},
 };
 
+use arrayvec::ArrayVec;
 use bitboard::BitBoard;
 use builder::PositionBuilder;
 use locus::{loc, File, Locus, Rank};
@@ -19,10 +20,23 @@ pub mod fen;
 pub mod locus;
 pub mod movegen;
 
+#[must_use = "Moves must either be undone, or made permanent"]
+pub struct UndoToken;
+
+impl UndoToken {
+    pub fn consume(self) {}
+}
+
+#[derive(Clone, PartialEq)]
+struct UndoMove {
+    mmove: Move,
+}
+
 #[derive(Clone, PartialEq)]
 pub struct Position {
     bboards: [BitBoard; PieceKind::COUNT * 2],
     to_play: Colour,
+    move_stack: ArrayVec<UndoMove, 256>,
 }
 
 impl Position {
@@ -63,31 +77,54 @@ impl Position {
         b
     }
 
-    pub fn make_move(&mut self, mmove: Move) {
+    fn clr_piece_at(&mut self, p: Piece, loc: Locus) {
+        self[p] = self[p].clear_piece_at(loc);
+    }
+
+    fn set_piece_at(&mut self, p: Piece, loc: Locus) {
+        self[p] = self[p].set_piece_at(loc);
+    }
+
+    pub fn make_move(&mut self, mmove: Move) -> UndoToken {
+        let mut undo = UndoMove {
+            mmove,
+        };
+
         self[mmove.piece] = self[mmove.piece]
             .clear_piece_at(mmove.src)
             .set_piece_at(mmove.dst);
 
         if let Some(fallen) = mmove.capture {
-            self[fallen] = self[fallen].clear_piece_at(mmove.dst);
+            self.clr_piece_at(fallen, mmove.dst);
         }
 
         if let Some(promotion) = mmove.promote {
-            self[mmove.piece] = self[mmove.piece].clear_piece_at(mmove.dst);
-            self[promotion] = self[promotion].set_piece_at(mmove.dst);
+            self.clr_piece_at(mmove.piece, mmove.dst);
+            self.set_piece_at(promotion, mmove.dst);
         }
 
-        self.to_play = self.to_play.next();
+        self.to_play = self.to_play().next();
+        self.move_stack.push(undo);
+
+        UndoToken
     }
 
-    pub fn undo_move(&mut self, mmove: Move) {
+    pub fn undo_move(&mut self, token: UndoToken) {
+        token.consume();
+
+        // Safety: We can unwrap here, since the only way for the caller to call
+        // undo_move is with an undo token which can only be obtained from
+        // make_move.
+        let undo = self.move_stack.pop().unwrap();
+        let mmove = undo.mmove;
+
         if let Some(promotion) = mmove.promote {
-            self[mmove.piece] = self[mmove.piece].set_piece_at(mmove.dst);
-            self[promotion] = self[promotion].clear_piece_at(mmove.dst);
+            self.set_piece_at(mmove.piece, mmove.dst);
+            self.clr_piece_at(promotion, mmove.dst);
         }
 
         if let Some(fallen) = mmove.capture {
-            self[fallen] = self[fallen].set_piece_at(mmove.dst);
+            self.set_piece_at(fallen, mmove.dst);
         }
 
         self[mmove.piece] = self[mmove.piece]
@@ -101,6 +138,7 @@ impl Position {
         Self {
             bboards: [BitBoard::empty(); PieceKind::COUNT * 2],
             to_play: Colour::White,
+            move_stack: ArrayVec::new(),
         }
     }
 
@@ -189,5 +227,35 @@ impl Default for Position {
             .with_piece_board(mkp!(White, Queen), loc!(d 1).to_bitboard())
             .with_piece_board(mkp!(Black, Queen), loc!(d 8).to_bitboard())
             .build()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{locus::loc, Position};
+    use crate::{
+        mmove::MoveBuilder,
+        piece::{mkp, Colour},
+    };
+
+    #[test]
+    fn undo_move() {
+        let mut pos = Position::default();
+
+        let token = pos.make_move(
+            MoveBuilder::new(mkp!(White, Pawn), loc!(e 2))
+                .with_dst(loc!(e 3))
+                .build(),
+        );
+
+        assert_ne!(pos, Position::default());
+
+        if pos.to_play() == Colour::White {
+            return;
+        }
+
+        pos.undo_move(token);
+
+        assert_eq!(pos, Position::default());
     }
 }

@@ -53,9 +53,9 @@ impl Position {
         }
 
         psedo_moves.retain(|mmove| {
-            self.make_move(*mmove);
+            let token = self.make_move(*mmove);
             let ret = !self.in_check(colour);
-            self.undo_move(*mmove);
+            self.undo_move(token);
             ret
         });
 
@@ -71,10 +71,10 @@ impl Position {
             let mut n = 0;
 
             for m in pos.movegen() {
-                pos.make_move(m);
+                let token = pos.make_move(m);
                 let moves = _perft(pos, depth - 1);
                 n += moves;
-                pos.undo_move(m);
+                pos.undo_move(token);
             }
 
             n
@@ -82,9 +82,9 @@ impl Position {
 
         let mut ret = Vec::new();
         for m in self.movegen() {
-            self.make_move(m);
+            let token = self.make_move(m);
             ret.push((m, _perft(self, depth - 1)));
-            self.undo_move(m);
+            self.undo_move(token);
         }
 
         ret
