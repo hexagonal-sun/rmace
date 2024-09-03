@@ -9,12 +9,13 @@ use clap::Parser;
 use nom::{
     bytes::complete::tag,
     character::complete::{digit1, one_of},
-    combinator::{map, map_res},
+    combinator::{map, map_res, opt},
     sequence::tuple,
     Finish, IResult,
 };
 use rmace::{
     mmove::Move,
+    piece::PieceKind,
     position::{
         locus::{File, Locus, Rank},
         Position,
@@ -42,12 +43,19 @@ struct Args {
 struct BasicMove {
     src: Locus,
     dst: Locus,
+    promote: Option<PieceKind>,
 }
 
 impl Display for BasicMove {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.src)?;
-        write!(f, "{}", self.dst)
+        write!(f, "{}", self.dst)?;
+
+        if let Some(p) = self.promote {
+            write!(f, "{}", p)?;
+        }
+
+        Ok(())
     }
 }
 
@@ -56,12 +64,13 @@ impl From<Move> for BasicMove {
         BasicMove {
             src: value.src,
             dst: value.dst,
+            promote: value.promote.map(|x| x.kind()),
         }
     }
 }
 
-fn debug(mut moves_made: Vec<BasicMove>, mut pos: Position, depth: u32) -> Result<()> {
-    print!("Moves Made: ");
+fn debug(original_pos: String, mut moves_made: Vec<BasicMove>, mut pos: Position, depth: u32) -> Result<()> {
+    print!("position fen \"{}\" moves ", original_pos);
     moves_made.iter().for_each(|m| print!("{} ", m));
     println!("");
     println!("Depth: {}", depth);
@@ -95,7 +104,7 @@ fn debug(mut moves_made: Vec<BasicMove>, mut pos: Position, depth: u32) -> Resul
                 );
                 pos.make_move(our_moves.0).consume();
                 moves_made.push(our_moves.1);
-                return debug(moves_made, pos.clone(), depth - 1);
+                return debug(original_pos, moves_made, pos.clone(), depth - 1);
             }
         } else {
             println!(
@@ -115,7 +124,7 @@ fn main() -> Result<()> {
     let args = Args::parse();
 
     let mut position =
-        Position::from_fen(args.fen).context("Could not create position from FEN string")?;
+        Position::from_fen(args.fen.clone()).context("Could not create position from FEN string")?;
 
     let now = Instant::now();
     let perft = position.perft(args.depth);
@@ -138,7 +147,7 @@ fn main() -> Result<()> {
     println!("Time taken: {:?}", time_taken);
 
     if args.debug {
-        debug(Vec::new(), position, args.depth)?;
+        debug(args.fen, Vec::new(), position, args.depth)?;
     }
 
     Ok(())
@@ -173,11 +182,21 @@ fn parse_locus(input: &str) -> IResult<&str, Locus> {
     })(input)
 }
 
-fn parse_move(input: &str) -> IResult<&str, BasicMove> {
-    map(tuple((parse_locus, parse_locus)), |(src, dst)| BasicMove {
-        src,
-        dst,
+fn parse_promotion(input: &str) -> IResult<&str, PieceKind> {
+    map(one_of("qrnb"), |x| match x {
+        'q' => PieceKind::Queen,
+        'r' => PieceKind::Rook,
+        'n' => PieceKind::Knight,
+        'b' => PieceKind::Bishop,
+        _ => unreachable!("Should only parse 'qrnb'"),
     })(input)
+}
+
+fn parse_move(input: &str) -> IResult<&str, BasicMove> {
+    map(
+        tuple((parse_locus, parse_locus, opt(parse_promotion))),
+        |(src, dst, promote)| BasicMove { src, dst, promote },
+    )(input)
 }
 
 fn parse_perft_line(input: &str) -> Result<(BasicMove, u32)> {
