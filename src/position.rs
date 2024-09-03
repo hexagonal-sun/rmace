@@ -6,16 +6,18 @@ use std::{
 use arrayvec::ArrayVec;
 use bitboard::BitBoard;
 use builder::PositionBuilder;
+use castling_rights::CastlingRights;
 use locus::{loc, File, Locus, Rank};
 use strum::{EnumCount, IntoEnumIterator};
 
 use crate::{
-    mmove::Move,
+    mmove::{CastlingMoveType, Move},
     piece::{mkp, Colour, Piece, PieceKind, PieceKindIter},
 };
 
 pub mod bitboard;
 pub mod builder;
+pub mod castling_rights;
 pub mod fen;
 pub mod locus;
 pub mod movegen;
@@ -32,6 +34,7 @@ struct UndoMove {
     mmove: Move,
     ep_state: Option<Locus>,
     ep_capture: Option<Locus>,
+    castling_rights: CastlingRights,
 }
 
 #[derive(Clone, PartialEq)]
@@ -39,6 +42,7 @@ pub struct Position {
     bboards: [BitBoard; PieceKind::COUNT * 2],
     to_play: Colour,
     en_passant: Option<Locus>,
+    castling_rights: CastlingRights,
     move_stack: ArrayVec<UndoMove, 256>,
 }
 
@@ -93,6 +97,7 @@ impl Position {
             mmove,
             ep_state: self.en_passant,
             ep_capture: None,
+            castling_rights: self.castling_rights,
         };
 
         self[mmove.piece] = self[mmove.piece]
@@ -101,6 +106,9 @@ impl Position {
 
         if let Some(fallen) = mmove.capture {
             self.clr_piece_at(fallen, mmove.dst);
+            if fallen.kind() == PieceKind::Rook {
+                self.castling_rights.clear(self.to_play.next(), mmove.dst);
+            }
         }
 
         if let Some(promotion) = mmove.promote {
@@ -135,6 +143,30 @@ impl Position {
             self.en_passant = None;
         }
 
+        if self.castling_rights[self.to_play].has_any() {
+            // Clear castling rights.
+            if mmove.piece.kind() == PieceKind::King {
+                self.castling_rights[self.to_play].clear_all();
+            } else if mmove.piece.kind() == PieceKind::Rook {
+                self.castling_rights.clear(self.to_play, mmove.src);
+            }
+        }
+
+        if let Some(castling_move) = mmove.castling_move {
+            let (r, _) = mmove.dst.to_rank_file();
+            let rook = Piece::new(PieceKind::Rook, self.to_play);
+            match castling_move {
+                CastlingMoveType::Kingside => {
+                    self.clr_piece_at(rook, Locus::from_rank_file(r, File::H));
+                    self.set_piece_at(rook, Locus::from_rank_file(r, File::F));
+                }
+                CastlingMoveType::Queenside => {
+                    self.clr_piece_at(rook, Locus::from_rank_file(r, File::A));
+                    self.set_piece_at(rook, Locus::from_rank_file(r, File::D));
+                }
+            }
+        }
+
         self.to_play = self.to_play.next();
         self.move_stack.push(undo);
 
@@ -149,6 +181,22 @@ impl Position {
         // make_move.
         let undo = self.move_stack.pop().unwrap();
         let mmove = undo.mmove;
+        self.to_play = self.to_play.next();
+
+        if let Some(castling_move) = mmove.castling_move {
+            let (r, _) = mmove.dst.to_rank_file();
+            let rook = Piece::new(PieceKind::Rook, self.to_play);
+            match castling_move {
+                CastlingMoveType::Kingside => {
+                    self.set_piece_at(rook, Locus::from_rank_file(r, File::H));
+                    self.clr_piece_at(rook, Locus::from_rank_file(r, File::F));
+                }
+                CastlingMoveType::Queenside => {
+                    self.set_piece_at(rook, Locus::from_rank_file(r, File::A));
+                    self.clr_piece_at(rook, Locus::from_rank_file(r, File::D));
+                }
+            }
+        }
 
         if let Some(promotion) = mmove.promote {
             self.set_piece_at(mmove.piece, mmove.dst);
@@ -170,8 +218,8 @@ impl Position {
             .set_piece_at(mmove.src)
             .clear_piece_at(mmove.dst);
 
-        self.to_play = self.to_play.next();
         self.en_passant = undo.ep_state;
+        self.castling_rights = undo.castling_rights;
     }
 
     pub fn empty() -> Self {
@@ -179,6 +227,7 @@ impl Position {
             bboards: [BitBoard::empty(); PieceKind::COUNT * 2],
             to_play: Colour::White,
             en_passant: None,
+            castling_rights: CastlingRights::empty(),
             move_stack: ArrayVec::new(),
         }
     }
@@ -267,6 +316,7 @@ impl Default for Position {
             .with_piece_board(mkp!(Black, King), loc!(e 8).to_bitboard())
             .with_piece_board(mkp!(White, Queen), loc!(d 1).to_bitboard())
             .with_piece_board(mkp!(Black, Queen), loc!(d 8).to_bitboard())
+            .with_castling_rights(CastlingRights::default())
             .build()
     }
 }
@@ -275,8 +325,8 @@ impl Default for Position {
 mod tests {
     use super::{locus::loc, Position};
     use crate::{
-        mmove::MoveBuilder,
-        piece::{mkp, Colour},
+        mmove::{CastlingMoveType, MoveBuilder},
+        piece::{mkp, Colour, Piece, PieceKind},
     };
 
     #[test]
@@ -352,5 +402,111 @@ mod tests {
         pos.undo_move(token);
 
         assert_eq!(pos, p2);
+    }
+
+    #[test]
+    fn make_move_castle_king_side() {
+        let mut pos =
+            Position::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQK2R w KQkq - 0 1").unwrap();
+
+        let p2 = pos.clone();
+
+        let token = pos.make_move(
+            MoveBuilder::new(mkp!(White, King), loc!(e 1))
+                .with_dst(loc!(g 1))
+                .is_castling_move(CastlingMoveType::Kingside)
+                .build(),
+        );
+
+        assert!(pos[Piece::new(PieceKind::Rook, Colour::White)].has_piece_at(loc!(f 1)));
+        assert!(!pos[Piece::new(PieceKind::Rook, Colour::White)].has_piece_at(loc!(h 1)));
+
+        pos.undo_move(token);
+
+        assert_eq!(pos, p2);
+
+        let mut pos =
+            Position::from_fen("rnbqk2r/pppppppp/8/8/8/8/PPPPPPPP/RNBQK2R b KQkq - 0 1").unwrap();
+
+        let p2 = pos.clone();
+
+        let token = pos.make_move(
+            MoveBuilder::new(mkp!(Black, King), loc!(e 8))
+                .with_dst(loc!(g 8))
+                .is_castling_move(CastlingMoveType::Kingside)
+                .build(),
+        );
+
+        assert!(pos[Piece::new(PieceKind::Rook, Colour::Black)].has_piece_at(loc!(f 8)));
+        assert!(!pos[Piece::new(PieceKind::Rook, Colour::Black)].has_piece_at(loc!(h 8)));
+
+        pos.undo_move(token);
+
+        assert_eq!(pos, p2);
+    }
+
+    #[test]
+    fn castling_rights_clear() {
+        let mut pos = Position::from_fen(
+            "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/P1N2Q1p/1PPBBPPP/R3K2R b KQkq - 0 1",
+        )
+        .unwrap();
+
+        pos.make_move(
+            MoveBuilder::new(mkp!(Black, Rook), loc!(a 8))
+                .with_dst(loc!(b 8))
+                .build(),
+        )
+        .consume();
+
+        assert!(pos.castling_rights[Colour::Black].king_side());
+        assert!(!pos.castling_rights[Colour::Black].queen_side());
+
+        let mut pos = Position::from_fen(
+            "r3k2r/p1ppqpb1/bn2pnN1/3P4/1p2P3/2N2Q2/PPPBBPpP/R3K2R w KQkq - 0 2",
+        )
+        .unwrap();
+
+        pos.make_move(
+            MoveBuilder::new(mkp!(White, Knight), loc!(g 6))
+                .with_dst(loc!(h 8))
+                .with_capture(mkp!(Black, Rook))
+                .build(),
+        )
+        .consume();
+
+        assert!(!pos.castling_rights[Colour::Black].king_side());
+        assert!(pos.castling_rights[Colour::Black].queen_side());
+
+        let mut pos = Position::from_fen(
+            "rnbq1k1r/pp1Pbppp/2p5/8/2B5/P7/1PP1NnPP/RNBQK2R b KQ - 0 8"
+        ).unwrap();
+
+        pos.make_move(
+            MoveBuilder::new(mkp!(Black, Knight), loc!(f 2))
+                .with_dst(loc!(h 1))
+                .with_capture(mkp!(White, Rook))
+                .build(),
+        )
+        .consume();
+
+        assert!(!pos.castling_rights[Colour::White].king_side());
+        assert!(pos.castling_rights[Colour::White].queen_side());
+
+        // Ensure that capturing a promoted rook doesn't cancel castling rights.
+        let mut pos = Position::from_fen(
+            "r3k2r/Pppp1ppp/1b3nbN/nP6/BBPPP3/q4N2/P5PP/r2Q1RK1 w kq - 0 2"
+        ).unwrap();
+
+        pos.make_move(
+            MoveBuilder::new(mkp!(White, Queen), loc!(d 1))
+                .with_dst(loc!(a 1))
+                .with_capture(mkp!(Black, Rook))
+                .build(),
+        )
+        .consume();
+
+        assert!(pos.castling_rights[Colour::Black].king_side());
+        assert!(pos.castling_rights[Colour::Black].queen_side());
     }
 }

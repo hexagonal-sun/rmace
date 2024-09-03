@@ -4,6 +4,7 @@ use crate::piece::{Colour, Piece};
 
 use super::{
     bitboard::BitBoard,
+    castling_rights::CastlingRights,
     locus::{Locus, Rank},
     Position,
 };
@@ -45,6 +46,11 @@ impl PositionBuilder {
             self.pos.en_passant = Some(l);
             Ok(self)
         }
+    }
+
+    pub fn with_castling_rights(mut self, cr: CastlingRights) -> Self {
+        self.pos.castling_rights = cr;
+        self
     }
 
     pub fn build(self) -> Position {

@@ -6,12 +6,19 @@ use crate::{
 };
 
 #[derive(Clone, Copy, PartialEq)]
+pub enum CastlingMoveType {
+    Queenside,
+    Kingside,
+}
+
+#[derive(Clone, Copy, PartialEq)]
 pub struct Move {
     pub piece: Piece,
     pub src: Locus,
     pub dst: Locus,
     pub capture: Option<Piece>,
     pub promote: Option<Piece>,
+    pub castling_move: Option<CastlingMoveType>,
     pub set_ep: bool,
 }
 
@@ -55,6 +62,7 @@ pub struct HasDst {
     promotion: Option<Piece>,
     capture: Option<Piece>,
     sets_ep: bool,
+    castling_move: Option<CastlingMoveType>,
 }
 
 #[derive(Clone, Copy)]
@@ -84,6 +92,7 @@ impl MoveBuilder<NeedsDst> {
                 promotion: None,
                 capture: None,
                 sets_ep: false,
+                castling_move: None,
             },
         }
     }
@@ -98,6 +107,7 @@ impl MoveBuilder<HasDst> {
             capture: self.extra.capture,
             promote: self.extra.promotion,
             set_ep: self.extra.sets_ep,
+            castling_move: self.extra.castling_move,
         }
     }
 
@@ -114,6 +124,11 @@ impl MoveBuilder<HasDst> {
     pub fn sets_ep(mut self) -> Self {
         assert_eq!(self.piece.kind(), PieceKind::Pawn);
         self.extra.sets_ep = true;
+        self
+    }
+
+    pub fn is_castling_move(mut self, kind: CastlingMoveType) -> Self {
+        self.extra.castling_move = Some(kind);
         self
     }
 }

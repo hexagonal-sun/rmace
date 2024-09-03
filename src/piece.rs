@@ -6,7 +6,7 @@ use strum::{EnumCount, EnumIter};
 #[derive(Clone, Copy, PartialEq, EnumIter, Debug)]
 pub enum Colour {
     White = 0,
-    Black = PieceKind::COUNT as isize,
+    Black = 1,
 }
 
 impl Colour {
@@ -68,7 +68,7 @@ impl Debug for Piece {
 impl Piece {
     pub fn new(kind: PieceKind, colour: Colour) -> Self {
         Self {
-            idx: kind as u8 + colour as u8,
+            idx: kind as u8 + (colour as u8 * PieceKind::COUNT as u8),
         }
     }
 

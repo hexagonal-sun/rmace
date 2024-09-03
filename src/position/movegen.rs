@@ -7,7 +7,7 @@ use crate::{
     piece::{Colour, Piece, PieceKind},
 };
 
-use super::Position;
+use super::{locus::Locus, Position};
 
 mod bishop;
 mod king;
@@ -21,6 +21,14 @@ mod rook;
 mod test;
 
 impl Position {
+    fn is_loc_under_attack(&self, l: Locus, c: Colour) -> bool {
+        self.loc_attacked_by_queen(l, c)
+            || self.loc_attacked_by_bishop(l, c)
+            || self.loc_attacked_by_knight(l, c)
+            || self.loc_attacked_by_rook(l, c)
+            || self.loc_attacked_by_pawn(l, c)
+    }
+
     fn in_check(&self, colour: Colour) -> bool {
         let their_colour = colour.next();
         let king_loc = self[Piece::new(PieceKind::King, colour)]
@@ -28,11 +36,7 @@ impl Position {
             .next()
             .unwrap();
 
-        self.loc_attacked_by_queen(king_loc, their_colour)
-            || self.loc_attacked_by_bishop(king_loc, their_colour)
-            || self.loc_attacked_by_knight(king_loc, their_colour)
-            || self.loc_attacked_by_rook(king_loc, their_colour)
-            || self.loc_attacked_by_pawn(king_loc, their_colour)
+        self.is_loc_under_attack(king_loc, their_colour)
     }
 
     pub fn movegen(&mut self) -> Vec<Move> {
@@ -150,5 +154,18 @@ mod tests {
             .fold(0, |accum, (_, x)| accum + x);
 
         assert_eq!(perft_res, 197281);
+    }
+
+    #[test]
+    fn perft_pos1() {
+        let perft_res = Position::from_fen(
+            "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+        )
+        .unwrap()
+        .perft(4)
+        .iter()
+        .fold(0, |accum, (_, x)| accum + x);
+
+        assert_eq!(perft_res, 4085603);
     }
 }

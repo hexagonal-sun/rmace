@@ -5,18 +5,22 @@ use nom::{
     branch::alt,
     bytes::complete::tag,
     character::complete::one_of,
-    combinator::map_res,
+    combinator::{map, map_res},
     multi::{many1, separated_list1},
     sequence::tuple,
     Finish, IResult,
 };
 use strum::{EnumCount, IntoEnumIterator};
 
-use crate::piece::{Colour, Piece, PieceKind};
+use crate::{
+    piece::{Colour, Piece, PieceKind},
+    position::locus::file,
+};
 
 use super::{
     builder::PositionBuilder,
-    locus::{file, Locus, Rank},
+    castling_rights::CastlingRights,
+    locus::{Locus, Rank},
     Position,
 };
 
@@ -30,6 +34,7 @@ enum Element {
 struct Fen {
     board: Vec<Vec<Element>>,
     colour: Colour,
+    castling_rights: CastlingRights,
 }
 
 fn parse_space(input: &str) -> IResult<&str, Element> {
@@ -74,22 +79,46 @@ fn parse_board(input: &str) -> IResult<&str, Vec<Vec<Element>>> {
 }
 
 fn parse_colour(input: &str) -> IResult<&str, Colour> {
-    map_res(one_of("wb"), |x| -> Result<Colour, Infallible> {
-        Ok(match x {
-            'w' => Colour::White,
-            'b' => Colour::Black,
-            _ => unreachable!("should only parse 'w' or 'b'"),
-        })
+    map(one_of("wb"), |x| match x {
+        'w' => Colour::White,
+        'b' => Colour::Black,
+        _ => unreachable!("should only parse 'w' or 'b'"),
     })(input)
+}
+
+fn parse_castling_rights(input: &str) -> IResult<&str, CastlingRights> {
+    let mut rights = CastlingRights::empty();
+
+    alt((
+        map(tag("-"), move |_| rights),
+        map(many1(one_of("kqKQ")), move |x| {
+            x.iter().for_each(|r| match *r {
+                'k' => rights[Colour::Black].set_king_side(),
+                'q' => rights[Colour::Black].set_queen_side(),
+                'K' => rights[Colour::White].set_king_side(),
+                'Q' => rights[Colour::White].set_queen_side(),
+                _ => unreachable!("Should only parse 'kqKQ'"),
+            });
+
+            rights
+        }),
+    ))(input)
 }
 
 fn parse_fen(input: &str) -> Result<Fen> {
     map_res(
-        tuple((parse_board, tag(" "), parse_colour)),
-        |(b, _, c)| -> Result<Fen, Infallible> {
+        tuple((
+            parse_board,
+            tag(" "),
+            parse_colour,
+            tag(" "),
+            parse_castling_rights,
+        )),
+        |(b, _, c, _, cr)| -> Result<Fen, Infallible> {
             Ok(Fen {
                 board: b,
                 colour: c,
+                castling_rights: cr,
             })
         },
     )(input)
@@ -140,7 +169,10 @@ impl Position {
             }
         }
 
-        Ok(pos.with_next_turn(fen.colour).build())
+        Ok(pos
+            .with_castling_rights(fen.castling_rights)
+            .with_next_turn(fen.colour)
+            .build())
     }
 }
 
@@ -155,7 +187,7 @@ impl Debug for Position {
 
 #[cfg(test)]
 mod tests {
-    use crate::position::Position;
+    use crate::{piece::Colour, position::Position};
 
     #[test]
     fn starting_pos() {
@@ -167,9 +199,19 @@ mod tests {
 
     #[test]
     fn empty() {
-        let result = Position::from_fen("8/8/8/8/8/8/8/8 w KQkq - 0 1").unwrap();
+        let result = Position::from_fen("8/8/8/8/8/8/8/8 w - - 0 1").unwrap();
 
         assert_eq!(result, Position::empty());
+    }
+
+    #[test]
+    fn castling_rights() {
+        let result = Position::from_fen("8/8/8/8/8/8/8/8 w kqK - 0 1").unwrap();
+
+        assert!(result.castling_rights[Colour::White].king_side());
+        assert!(!result.castling_rights[Colour::White].queen_side());
+        assert!(result.castling_rights[Colour::Black].king_side());
+        assert!(result.castling_rights[Colour::Black].queen_side());
     }
 
     #[test]
