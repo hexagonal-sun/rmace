@@ -1,7 +1,7 @@
 use std::{
     fmt::Display,
     io::{self, BufRead},
-    time::Instant,
+    time::{Duration, Instant},
 };
 
 use anyhow::{Context, Result};
@@ -69,7 +69,12 @@ impl From<Move> for BasicMove {
     }
 }
 
-fn debug(original_pos: String, mut moves_made: Vec<BasicMove>, mut pos: Position, depth: u32) -> Result<()> {
+fn debug(
+    original_pos: String,
+    mut moves_made: Vec<BasicMove>,
+    mut pos: Position,
+    depth: u32,
+) -> Result<()> {
     print!("position fen \"{}\" moves ", original_pos);
     moves_made.iter().for_each(|m| print!("{} ", m));
     println!("");
@@ -123,8 +128,8 @@ fn debug(original_pos: String, mut moves_made: Vec<BasicMove>, mut pos: Position
 fn main() -> Result<()> {
     let args = Args::parse();
 
-    let mut position =
-        Position::from_fen(args.fen.clone()).context("Could not create position from FEN string")?;
+    let mut position = Position::from_fen(args.fen.clone())
+        .context("Could not create position from FEN string")?;
 
     let now = Instant::now();
     let perft = position.perft(args.depth);
@@ -139,12 +144,15 @@ fn main() -> Result<()> {
         println!("{}: {}", m, n);
     }
 
+    let total_nodes = perft.iter().fold(0, |accum, (_, n)| accum + *n);
+
     println!("===========");
-    println!(
-        "Total nodes: {}",
-        perft.iter().fold(0, |accum, (_, n)| accum + *n)
-    );
+    println!("Total nodes: {}", total_nodes);
     println!("Time taken: {:?}", time_taken);
+    println!(
+        "Node per second: {}",
+        total_nodes as f32 / time_taken.as_secs_f32()
+    );
 
     if args.debug {
         debug(args.fen, Vec::new(), position, args.depth)?;
