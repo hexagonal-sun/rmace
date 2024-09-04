@@ -98,6 +98,10 @@ impl BitBoard {
         }
     }
 
+    pub const fn popcount(self) -> u32 {
+        self.inner.count_ones()
+    }
+
     pub const fn opt_or(self, other: Option<Self>) -> Self {
         match other {
             Some(bb) => self.or(bb),
