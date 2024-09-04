@@ -25,8 +25,8 @@ pub enum PieceKind {
     Rook,
     Knight,
     Bishop,
-    King,
     Queen,
+    King,
 }
 
 impl Display for PieceKind {

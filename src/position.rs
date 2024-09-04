@@ -7,6 +7,7 @@ use arrayvec::ArrayVec;
 use bitboard::BitBoard;
 use builder::PositionBuilder;
 use castling_rights::CastlingRights;
+use eval::Evaluator;
 use locus::{loc, File, Locus, Rank};
 use strum::{EnumCount, IntoEnumIterator};
 
@@ -18,6 +19,7 @@ use crate::{
 pub mod bitboard;
 pub mod builder;
 pub mod castling_rights;
+pub mod eval;
 pub mod fen;
 pub mod locus;
 pub mod movegen;
@@ -282,6 +284,8 @@ impl Display for Position {
         for file in File::iter() {
             write!(f, "{file:?} ")?;
         }
+
+        writeln!(f, "\nEvaluation: {}", Evaluator::eval(self))?;
 
         Ok(())
     }
