@@ -265,7 +265,7 @@ impl Iterator for OpponentBbIter<'_> {
 impl Display for Position {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for rank in Rank::iter().rev() {
-            write!(f, "{rank:?} ")?;
+            write!(f, "{rank} ")?;
             for file in File::iter() {
                 write!(
                     f,
