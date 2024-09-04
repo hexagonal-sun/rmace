@@ -14,6 +14,12 @@ pub struct PositionBuilder {
     pos: Position,
 }
 
+impl Default for PositionBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PositionBuilder {
     pub fn new() -> Self {
         Self {

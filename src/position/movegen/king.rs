@@ -2,7 +2,7 @@ use paste::paste;
 
 use crate::{
     mmove::{CastlingMoveType, Move, MoveBuilder},
-    piece::{Colour, Piece, PieceKind},
+    piece::{Piece, PieceKind},
     position::{
         bitboard::BitBoard,
         locus::{loc, File, Locus},

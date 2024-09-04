@@ -298,7 +298,7 @@ mod tests {
     fn east_boundary() {
         for rank in Rank::iter() {
             let l = Locus::from_rank_file(rank, File::H);
-            assert!(matches!(l.east(), None));
+            assert!(l.east().is_none());
         }
     }
 
@@ -318,7 +318,7 @@ mod tests {
     fn west_boundary() {
         for rank in Rank::iter() {
             let l = Locus::from_rank_file(rank, File::A);
-            assert!(matches!(l.west(), None));
+            assert!(l.west().is_none());
         }
     }
 
@@ -338,7 +338,7 @@ mod tests {
     fn south_boundary() {
         for file in File::iter() {
             let l = Locus::from_rank_file(Rank::One, file);
-            assert!(matches!(l.south(), None));
+            assert!(l.south().is_none());
         }
     }
 
@@ -358,7 +358,7 @@ mod tests {
     fn noth_boundary() {
         for file in File::iter() {
             let l = Locus::from_rank_file(Rank::Eight, file);
-            assert!(matches!(l.north(), None));
+            assert!(l.north().is_none());
         }
     }
 

@@ -242,7 +242,7 @@ impl Position {
 
     pub fn iter_opponent_bbds(&self) -> OpponentBbIter {
         OpponentBbIter {
-            pos: &self,
+            pos: self,
             p: PieceKind::iter(),
         }
     }
@@ -378,7 +378,7 @@ mod tests {
                 .build(),
         );
 
-        assert!(matches!(pos.en_passant, None));
+        assert!(pos.en_passant.is_none());
 
         pos.undo_move(token);
 

@@ -65,7 +65,7 @@ impl CastlingRight {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Debug, Default)]
 pub struct CastlingRights([CastlingRight; 2]);
 
 impl CastlingRights {
@@ -103,12 +103,6 @@ impl IndexMut<Colour> for CastlingRights {
             Colour::White => &mut self.0[0],
             Colour::Black => &mut self.0[1],
         }
-    }
-}
-
-impl Default for CastlingRights {
-    fn default() -> Self {
-        Self(Default::default())
     }
 }
 

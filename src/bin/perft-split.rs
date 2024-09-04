@@ -1,7 +1,7 @@
 use std::{
     fmt::Display,
     io::{self, BufRead},
-    time::{Duration, Instant},
+    time::Instant,
 };
 
 use anyhow::{Context, Result};
@@ -77,7 +77,7 @@ fn debug(
 ) -> Result<()> {
     print!("position fen \"{}\" moves ", original_pos);
     moves_made.iter().for_each(|m| print!("{} ", m));
-    println!("");
+    println!();
     println!("Depth: {}", depth);
 
     let other_moves = read_other_perft_output()?;
@@ -89,11 +89,9 @@ fn debug(
         .collect();
 
     for other_move in other_moves.iter() {
-        if perft
+        if !perft
             .iter()
-            .filter(|x| other_move.0 == x.1)
-            .next()
-            .is_none()
+            .any(|x| other_move.0 == x.1)
         {
             println!("Move {} exists in other engine, but not us.", other_move.0);
             return Ok(());
@@ -101,7 +99,7 @@ fn debug(
     }
 
     for our_moves in perft {
-        if let Some(x) = other_moves.iter().filter(|x| our_moves.1 == x.0).next() {
+        if let Some(x) = other_moves.iter().find(|x| our_moves.1 == x.0) {
             if x.1 != our_moves.2 {
                 println!(
                     "Move {} contains differing perft result. Making move.",
@@ -164,7 +162,7 @@ fn main() -> Result<()> {
 fn parse_rank(input: &str) -> IResult<&str, Rank> {
     map_res(one_of("12345678"), |x| -> Result<Rank, anyhow::Error> {
         let value: u32 = x.to_string().parse()?;
-        Ok(Rank::try_from(value)?)
+        Rank::try_from(value)
     })(input)
 }
 
