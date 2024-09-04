@@ -1,6 +1,7 @@
 use anyhow::{bail, Result};
+use strum::IntoEnumIterator;
 
-use crate::piece::{Colour, Piece};
+use crate::piece::{Colour, Piece, PieceKind};
 
 use super::{
     bitboard::BitBoard,
@@ -53,7 +54,13 @@ impl PositionBuilder {
         self
     }
 
-    pub fn build(self) -> Position {
+    pub fn build(mut self) -> Position {
+        let mut pieces = 0u8;
+        PieceKind::iter().for_each(|k| {
+            pieces += self.pos[Piece::new(k, Colour::White)].popcount() as u8;
+            pieces += self.pos[Piece::new(k, Colour::Black)].popcount() as u8;
+        });
+        self.pos.material_count = pieces;
         self.pos
     }
 }

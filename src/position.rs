@@ -43,6 +43,7 @@ pub struct Position {
     to_play: Colour,
     en_passant: Option<Locus>,
     castling_rights: CastlingRights,
+    material_count: u8,
     move_stack: ArrayVec<UndoMove, 256>,
 }
 
@@ -109,6 +110,7 @@ impl Position {
             if fallen.kind() == PieceKind::Rook {
                 self.castling_rights.clear(self.to_play.next(), mmove.dst);
             }
+            self.material_count -= 1;
         }
 
         if let Some(promotion) = mmove.promote {
@@ -127,6 +129,7 @@ impl Position {
                 };
 
                 self.clr_piece_at(captured_piece, pawn_loc);
+                self.material_count -= 1;
                 undo.ep_capture = Some(pawn_loc);
             }
         }
@@ -205,9 +208,11 @@ impl Position {
 
         if let Some(fallen) = mmove.capture {
             self.set_piece_at(fallen, mmove.dst);
+            self.material_count += 1;
         }
 
         if let Some(loc) = undo.ep_capture {
+            self.material_count += 1;
             self.set_piece_at(
                 Piece::new(PieceKind::Pawn, mmove.piece.colour().next()),
                 loc,
@@ -229,6 +234,7 @@ impl Position {
             en_passant: None,
             castling_rights: CastlingRights::empty(),
             move_stack: ArrayVec::new(),
+            material_count: 0,
         }
     }
 
