@@ -206,14 +206,14 @@ mod tests {
 
     #[test]
     fn perft_pos5() {
-        let perft_res =
-            Position::from_fen("r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10 ")
-                .unwrap()
-                .perft(4)
-                .iter()
-                .fold(0, |accum, (_, x)| accum + x);
+        let perft_res = Position::from_fen(
+            "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10 ",
+        )
+        .unwrap()
+        .perft(4)
+        .iter()
+        .fold(0, |accum, (_, x)| accum + x);
 
-        assert_eq!(perft_res,  3894594);
+        assert_eq!(perft_res, 3894594);
     }
-
 }

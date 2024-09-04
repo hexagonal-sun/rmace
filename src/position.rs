@@ -478,9 +478,9 @@ mod tests {
         assert!(!pos.castling_rights[Colour::Black].king_side());
         assert!(pos.castling_rights[Colour::Black].queen_side());
 
-        let mut pos = Position::from_fen(
-            "rnbq1k1r/pp1Pbppp/2p5/8/2B5/P7/1PP1NnPP/RNBQK2R b KQ - 0 8"
-        ).unwrap();
+        let mut pos =
+            Position::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/P7/1PP1NnPP/RNBQK2R b KQ - 0 8")
+                .unwrap();
 
         pos.make_move(
             MoveBuilder::new(mkp!(Black, Knight), loc!(f 2))
@@ -494,9 +494,9 @@ mod tests {
         assert!(pos.castling_rights[Colour::White].queen_side());
 
         // Ensure that capturing a promoted rook doesn't cancel castling rights.
-        let mut pos = Position::from_fen(
-            "r3k2r/Pppp1ppp/1b3nbN/nP6/BBPPP3/q4N2/P5PP/r2Q1RK1 w kq - 0 2"
-        ).unwrap();
+        let mut pos =
+            Position::from_fen("r3k2r/Pppp1ppp/1b3nbN/nP6/BBPPP3/q4N2/P5PP/r2Q1RK1 w kq - 0 2")
+                .unwrap();
 
         pos.make_move(
             MoveBuilder::new(mkp!(White, Queen), loc!(d 1))

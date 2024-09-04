@@ -84,7 +84,6 @@ impl CastlingRights {
             _ => (),
         }
     }
-
 }
 
 impl Index<Colour> for CastlingRights {
