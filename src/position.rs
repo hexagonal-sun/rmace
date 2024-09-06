@@ -50,6 +50,10 @@ pub struct Position {
 }
 
 impl Position {
+    pub fn to_play(&self) -> Colour {
+        self.to_play
+    }
+
     pub fn piece_at_loc(&self, l: Locus) -> Option<Piece> {
         for p in PieceKind::iter() {
             let w_bb = self.bboards[p as usize];

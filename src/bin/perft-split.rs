@@ -1,5 +1,4 @@
 use std::{
-    fmt::Display,
     io::{self, BufRead},
     time::Instant,
 };
@@ -7,19 +6,11 @@ use std::{
 use anyhow::{Context, Result};
 use clap::Parser;
 use nom::{
-    bytes::complete::tag,
-    character::complete::{digit1, one_of},
-    combinator::{map, map_res, opt},
-    sequence::tuple,
-    Finish, IResult,
+    bytes::complete::tag, character::complete::digit1, combinator::map_res, sequence::tuple, Finish,
 };
 use rmace::{
-    mmove::Move,
-    piece::PieceKind,
-    position::{
-        locus::{File, Locus, Rank},
-        Position,
-    },
+    parsers::uci_move::{parse_uci_move, UciMove},
+    position::Position,
 };
 
 #[derive(clap::Parser)]
@@ -39,39 +30,9 @@ struct Args {
     debug: bool,
 }
 
-#[derive(PartialEq)]
-struct BasicMove {
-    src: Locus,
-    dst: Locus,
-    promote: Option<PieceKind>,
-}
-
-impl Display for BasicMove {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.src)?;
-        write!(f, "{}", self.dst)?;
-
-        if let Some(p) = self.promote {
-            write!(f, "{}", p)?;
-        }
-
-        Ok(())
-    }
-}
-
-impl From<Move> for BasicMove {
-    fn from(value: Move) -> Self {
-        BasicMove {
-            src: value.src,
-            dst: value.dst,
-            promote: value.promote.map(|x| x.kind()),
-        }
-    }
-}
-
 fn debug(
     original_pos: String,
-    mut moves_made: Vec<BasicMove>,
+    mut moves_made: Vec<UciMove>,
     mut pos: Position,
     depth: u32,
 ) -> Result<()> {
@@ -85,14 +46,11 @@ fn debug(
     let perft: Vec<_> = pos
         .perft(depth)
         .iter()
-        .map(|(m, x)| (*m, BasicMove::from(*m), *x))
+        .map(|(m, x)| (*m, UciMove::from(*m), *x))
         .collect();
 
     for other_move in other_moves.iter() {
-        if !perft
-            .iter()
-            .any(|x| other_move.0 == x.1)
-        {
+        if !perft.iter().any(|x| other_move.0 == x.1) {
             println!("Move {} exists in other engine, but not us.", other_move.0);
             return Ok(());
         }
@@ -133,10 +91,7 @@ fn main() -> Result<()> {
     let perft = position.perft(args.depth);
     let time_taken = now.elapsed();
 
-    let perft: Vec<_> = perft
-        .iter()
-        .map(|(m, x)| (BasicMove::from(*m), x))
-        .collect();
+    let perft: Vec<_> = perft.iter().map(|(m, x)| (UciMove::from(*m), x)).collect();
 
     for (m, n) in perft.iter() {
         println!("{}: {}", m, n);
@@ -159,63 +114,17 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn parse_rank(input: &str) -> IResult<&str, Rank> {
-    map_res(one_of("12345678"), |x| -> Result<Rank, anyhow::Error> {
-        let value: u32 = x.to_string().parse()?;
-        Rank::try_from(value)
-    })(input)
-}
-
-fn parse_file(input: &str) -> IResult<&str, File> {
-    map(one_of("abcdefgh"), |x| -> File {
-        match x {
-            'a' => File::A,
-            'b' => File::B,
-            'c' => File::C,
-            'd' => File::D,
-            'e' => File::E,
-            'f' => File::F,
-            'g' => File::G,
-            'h' => File::H,
-            _ => unreachable!("Parser will only accept valid files"),
-        }
-    })(input)
-}
-
-fn parse_locus(input: &str) -> IResult<&str, Locus> {
-    map(tuple((parse_file, parse_rank)), |(f, r)| {
-        Locus::from_rank_file(r, f)
-    })(input)
-}
-
-fn parse_promotion(input: &str) -> IResult<&str, PieceKind> {
-    map(one_of("qrnb"), |x| match x {
-        'q' => PieceKind::Queen,
-        'r' => PieceKind::Rook,
-        'n' => PieceKind::Knight,
-        'b' => PieceKind::Bishop,
-        _ => unreachable!("Should only parse 'qrnb'"),
-    })(input)
-}
-
-fn parse_move(input: &str) -> IResult<&str, BasicMove> {
-    map(
-        tuple((parse_locus, parse_locus, opt(parse_promotion))),
-        |(src, dst, promote)| BasicMove { src, dst, promote },
-    )(input)
-}
-
-fn parse_perft_line(input: &str) -> Result<(BasicMove, u32)> {
+fn parse_perft_line(input: &str) -> Result<(UciMove, u32)> {
     Ok(map_res(
-        tuple((parse_move, tag(": "), digit1)),
-        |(m, _, n)| -> Result<(BasicMove, u32)> { Ok((m, n.parse()?)) },
+        tuple((parse_uci_move, tag(": "), digit1)),
+        |(m, _, n)| -> Result<(UciMove, u32)> { Ok((m, n.parse()?)) },
     )(input)
     .map_err(|e| e.to_owned())
     .finish()
     .map(|x| x.1)?)
 }
 
-fn read_other_perft_output() -> Result<Vec<(BasicMove, u32)>> {
+fn read_other_perft_output() -> Result<Vec<(UciMove, u32)>> {
     println!("Enter the perft output from another engine, followed by a blank newline:");
     let stdin = io::stdin();
     let mut ret = Vec::new();

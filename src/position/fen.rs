@@ -1,143 +1,31 @@
-use std::{convert::Infallible, fmt::Debug, num::ParseIntError};
+use std::fmt::Debug;
 
 use anyhow::{anyhow, bail, Result};
-use nom::{
-    branch::alt,
-    bytes::complete::tag,
-    character::complete::one_of,
-    combinator::{map, map_res},
-    multi::{many1, separated_list1},
-    sequence::tuple,
-    Finish, IResult,
-};
+use nom::Finish;
 use strum::{EnumCount, IntoEnumIterator};
 
 use crate::{
-    piece::{Colour, Piece, PieceKind},
+    parsers::fen::{parse_fen, Fen, FenElement},
     position::locus::file,
 };
 
 use super::{
     builder::PositionBuilder,
-    castling_rights::CastlingRights,
     locus::{Locus, Rank},
     Position,
 };
 
-#[derive(Debug)]
-enum Element {
-    Piece(Piece),
-    Space(u8),
-}
+impl TryFrom<Fen> for Position {
+    type Error = anyhow::Error;
 
-#[derive(Debug)]
-struct Fen {
-    board: Vec<Vec<Element>>,
-    colour: Colour,
-    castling_rights: CastlingRights,
-}
-
-fn parse_space(input: &str) -> IResult<&str, Element> {
-    map_res(one_of("12345678"), |x| -> Result<Element, ParseIntError> {
-        Ok(Element::Space(x.to_string().parse()?))
-    })(input)
-}
-
-fn parse_piece(input: &str) -> IResult<&str, Element> {
-    map_res(one_of("rnbkqpRNBKQP"), |x| -> Result<Element, Infallible> {
-        let kind = match x.to_ascii_lowercase() {
-            'r' => PieceKind::Rook,
-            'n' => PieceKind::Knight,
-            'b' => PieceKind::Bishop,
-            'q' => PieceKind::Queen,
-            'k' => PieceKind::King,
-            'p' => PieceKind::Pawn,
-            _ => unreachable!("other chars not allowed to be parsed"),
-        };
-
-        Ok(Element::Piece(Piece::new(
-            kind,
-            if x.is_ascii_uppercase() {
-                Colour::White
-            } else {
-                Colour::Black
-            },
-        )))
-    })(input)
-}
-
-fn parse_element(input: &str) -> IResult<&str, Element> {
-    alt((parse_piece, parse_space))(input)
-}
-
-fn parse_rank(input: &str) -> IResult<&str, Vec<Element>> {
-    many1(parse_element)(input)
-}
-
-fn parse_board(input: &str) -> IResult<&str, Vec<Vec<Element>>> {
-    separated_list1(tag("/"), parse_rank)(input)
-}
-
-fn parse_colour(input: &str) -> IResult<&str, Colour> {
-    map(one_of("wb"), |x| match x {
-        'w' => Colour::White,
-        'b' => Colour::Black,
-        _ => unreachable!("should only parse 'w' or 'b'"),
-    })(input)
-}
-
-fn parse_castling_rights(input: &str) -> IResult<&str, CastlingRights> {
-    let mut rights = CastlingRights::empty();
-
-    alt((
-        map(tag("-"), move |_| rights),
-        map(many1(one_of("kqKQ")), move |x| {
-            x.iter().for_each(|r| match *r {
-                'k' => rights[Colour::Black].set_king_side(),
-                'q' => rights[Colour::Black].set_queen_side(),
-                'K' => rights[Colour::White].set_king_side(),
-                'Q' => rights[Colour::White].set_queen_side(),
-                _ => unreachable!("Should only parse 'kqKQ'"),
-            });
-
-            rights
-        }),
-    ))(input)
-}
-
-fn parse_fen(input: &str) -> Result<Fen> {
-    map_res(
-        tuple((
-            parse_board,
-            tag(" "),
-            parse_colour,
-            tag(" "),
-            parse_castling_rights,
-        )),
-        |(b, _, c, _, cr)| -> Result<Fen, Infallible> {
-            Ok(Fen {
-                board: b,
-                colour: c,
-                castling_rights: cr,
-            })
-        },
-    )(input)
-    .finish()
-    .map_err(|x| anyhow!("Could not parse FEN: {}", x.to_string()))
-    .map(|x| x.1)
-}
-
-impl Position {
-    pub fn from_fen(fen: impl ToString) -> Result<Self> {
-        let fen = parse_fen(&fen.to_string())?;
-
-        if fen.board.len() != Rank::COUNT {
+    fn try_from(value: Fen) -> std::result::Result<Self, Self::Error> {
+        if value.board.len() != Rank::COUNT {
             bail!("Invalid number of ranks in FEN string");
         }
 
         let mut pos = PositionBuilder::new();
 
-        for (elms, rank) in fen.board.iter().zip(Rank::iter().rev()) {
+        for (elms, rank) in value.board.iter().zip(Rank::iter().rev()) {
             let mut loc = Some(Locus::from_rank_file(rank, file!(a)));
 
             fn shift(loc: &mut Option<Locus>) -> Result<()> {
@@ -152,11 +40,11 @@ impl Position {
 
             for elm in elms.iter() {
                 match elm {
-                    Element::Piece(p) => {
+                    FenElement::Piece(p) => {
                         pos = pos.with_piece_at(*p, loc.unwrap());
                         shift(&mut loc)?;
                     }
-                    Element::Space(n) => {
+                    FenElement::Space(n) => {
                         for _ in 0..*n {
                             shift(&mut loc)?;
                         }
@@ -170,9 +58,20 @@ impl Position {
         }
 
         Ok(pos
-            .with_castling_rights(fen.castling_rights)
-            .with_next_turn(fen.colour)
+            .with_castling_rights(value.castling_rights)
+            .with_next_turn(value.colour)
             .build())
+    }
+}
+
+impl Position {
+    pub fn from_fen(fen: impl ToString) -> Result<Self> {
+        let fen = parse_fen(&fen.to_string())
+            .finish()
+            .map_err(|x| anyhow!("Could not parse FEN: {}", x.to_string()))
+            .map(|x| x.1)?;
+
+        Self::try_from(fen)
     }
 }
 
