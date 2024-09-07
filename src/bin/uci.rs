@@ -17,7 +17,7 @@ use rmace::{
         uci_move::{parse_uci_move, UciMove},
     },
     position::Position,
-    search::Search,
+    search::SearchBuilder,
 };
 
 #[derive(Debug)]
@@ -118,7 +118,7 @@ fn handle_cmd_newgame(pos: &mut Position) {
 }
 
 fn handle_cmd_go(pos: &mut Position) {
-    let m = Search::new(pos).go();
+    let m = SearchBuilder::new(pos.clone()).build().go();
 
     println!("bestmove {}", UciMove::from(m))
 }

@@ -25,12 +25,14 @@ git checkout "$testBranch"
 popd
 
 for dir in "$masterdir" "$newdir"; do
+    pushd "$dir"
     cargo build --release --bin uci
+    popd
 done
 
 cutechess-cli \
-    -engine name=mace-new proto=uci  cmd="$newdir"/target/release/uci \
-    -engine name=mace-master proto=uci cmd="$masterdir"/target/release/uci \
+    -engine name="rmace-$testBranch" proto=uci  cmd="$newdir"/target/release/uci \
+    -engine name=rmace-master proto=uci cmd="$masterdir"/target/release/uci \
     -openings file="$masterdir"/etc/silversuite.pgn \
     -concurrency 3 -ratinginterval 10 -games 500 -pgnout games.pgn \
     -each  tc=5+0.01 -repeat

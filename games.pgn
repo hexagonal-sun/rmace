@@ -1,0 +1,652 @@
+[Event "?"]
+[Site "?"]
+[Date "2024.09.07"]
+[Round "1"]
+[White "mace-new"]
+[Black "mace-master"]
+[Result "1-0"]
+[ECO "A03"]
+[GameDuration "00:00:10"]
+[GameEndTime "2024-09-07T21:12:11.683 BST"]
+[GameStartTime "2024-09-07T21:12:01.230 BST"]
+[Opening "Bird's Opening"]
+[PlyCount "15"]
+[Termination "time forfeit"]
+[TimeControl "5+0.01"]
+
+1. f4 {book} d5 {book} 2. Nf3 {book} Nf6 {book} 3. b3 {book} g6 {book}
+4. Bb2 {book} Bg7 {book} 5. e3 {book} O-O {book} 6. Be2 {book} c5 {book}
+7. O-O {book} Nc6 {book} 8. Ne5 {book, Black loses on time} 1-0
+
+[Event "?"]
+[Site "?"]
+[Date "2024.09.07"]
+[Round "1"]
+[White "mace-master"]
+[Black "mace-new"]
+[Result "0-1"]
+[ECO "A03"]
+[GameDuration "00:00:14"]
+[GameEndTime "2024-09-07T21:12:15.803 BST"]
+[GameStartTime "2024-09-07T21:12:01.231 BST"]
+[Opening "Bird's Opening"]
+[PlyCount "16"]
+[Termination "time forfeit"]
+[TimeControl "5+0.01"]
+
+1. f4 {book} d5 {book} 2. Nf3 {book} Nf6 {book} 3. b3 {book} g6 {book}
+4. Bb2 {book} Bg7 {book} 5. e3 {book} O-O {book} 6. Be2 {book} c5 {book}
+7. O-O {book} Nc6 {book} 8. Ne5 {book} Ne4 {0.53s, White loses on time} 0-1
+
+[Event "?"]
+[Site "?"]
+[Date "2024.09.07"]
+[Round "1"]
+[White "mace-new"]
+[Black "mace-master"]
+[Result "1-0"]
+[ECO "A05"]
+[GameDuration "00:00:09"]
+[GameEndTime "2024-09-07T21:12:10.908 BST"]
+[GameStartTime "2024-09-07T21:12:01.232 BST"]
+[Opening "Reti"]
+[PlyCount "13"]
+[Termination "time forfeit"]
+[TimeControl "5+0.01"]
+[Variation "King's Indian attack"]
+
+1. Nf3 {book} Nf6 {book} 2. g3 {book} g6 {book} 3. Bg2 {book} Bg7 {book}
+4. O-O {book} O-O {book} 5. d3 {book} d6 {book} 6. e4 {book} e5 {4.9s}
+7. Bg5 {Black loses on time} 1-0
+
+[Event "?"]
+[Site "?"]
+[Date "2024.09.07"]
+[Round "1"]
+[White "mace-master"]
+[Black "mace-new"]
+[Result "0-1"]
+[ECO "A05"]
+[GameDuration "00:00:05"]
+[GameEndTime "2024-09-07T21:12:16.528 BST"]
+[GameStartTime "2024-09-07T21:12:10.910 BST"]
+[Opening "Reti"]
+[PlyCount "12"]
+[Termination "time forfeit"]
+[TimeControl "5+0.01"]
+[Variation "King's Indian attack"]
+
+1. Nf3 {book} Nf6 {book} 2. g3 {book} g6 {book} 3. Bg2 {book} Bg7 {book}
+4. O-O {book} O-O {book} 5. d3 {book} d6 {book} 6. e4 {book}
+e5 {White loses on time} 0-1
+
+[Event "?"]
+[Site "?"]
+[Date "2024.09.07"]
+[Round "1"]
+[White "mace-new"]
+[Black "mace-master"]
+[Result "1-0"]
+[ECO "A22"]
+[GameDuration "00:00:06"]
+[GameEndTime "2024-09-07T21:12:17.981 BST"]
+[GameStartTime "2024-09-07T21:12:11.685 BST"]
+[Opening "English Opening"]
+[PlyCount "7"]
+[Termination "time forfeit"]
+[TimeControl "5+0.01"]
+
+1. c4 {book} e5 {book} 2. Nc3 {book} Nf6 {book} 3. Nf3 {book} Nc6 {book}
+4. Qa4 {Black loses on time} 1-0
+
+[Event "?"]
+[Site "?"]
+[Date "2024.09.07"]
+[Round "1"]
+[White "mace-master"]
+[Black "mace-new"]
+[Result "0-1"]
+[ECO "A22"]
+[GameDuration "00:00:06"]
+[GameEndTime "2024-09-07T21:12:22.734 BST"]
+[GameStartTime "2024-09-07T21:12:15.805 BST"]
+[Opening "English Opening"]
+[PlyCount "8"]
+[Termination "time forfeit"]
+[TimeControl "5+0.01"]
+
+1. c4 {book} e5 {book} 2. Nc3 {book} Nf6 {book} 3. Nf3 {book} Nc6 {book}
+4. Nd4 {4.0s} exd4 {White loses on time} 0-1
+
+[Event "?"]
+[Site "?"]
+[Date "2024.09.07"]
+[Round "1"]
+[White "mace-new"]
+[Black "mace-master"]
+[Result "1-0"]
+[ECO "A30"]
+[GameDuration "00:00:13"]
+[GameEndTime "2024-09-07T21:12:30.326 BST"]
+[GameStartTime "2024-09-07T21:12:16.530 BST"]
+[Opening "English"]
+[PlyCount "19"]
+[Termination "time forfeit"]
+[TimeControl "5+0.01"]
+[Variation "Symmetrical variation"]
+
+1. c4 {book} c5 {book} 2. Nf3 {book} Nf6 {book} 3. g3 {book} b6 {book}
+4. Bg2 {book} Bb7 {book} 5. Nc3 {book} e6 {book} 6. O-O {book} Be7 {book}
+7. d4 {book} cxd4 {book} 8. Qxd4 {book} d6 {book} 9. Rd1 {book} a6 {book}
+10. Bg5 {0.69s, Black loses on time} 1-0
+
+[Event "?"]
+[Site "?"]
+[Date "2024.09.07"]
+[Round "1"]
+[White "mace-master"]
+[Black "mace-new"]
+[Result "0-1"]
+[ECO "A30"]
+[GameDuration "00:00:16"]
+[GameEndTime "2024-09-07T21:12:34.793 BST"]
+[GameStartTime "2024-09-07T21:12:17.982 BST"]
+[Opening "English"]
+[PlyCount "18"]
+[Termination "time forfeit"]
+[TimeControl "5+0.01"]
+[Variation "Symmetrical variation"]
+
+1. c4 {book} c5 {book} 2. Nf3 {book} Nf6 {book} 3. g3 {book} b6 {book}
+4. Bg2 {book} Bb7 {book} 5. Nc3 {book} e6 {book} 6. O-O {book} Be7 {book}
+7. d4 {book} cxd4 {book} 8. Qxd4 {book} d6 {book} 9. Rd1 {book}
+a6 {book, White loses on time} 0-1
+
+[Event "?"]
+[Site "?"]
+[Date "2024.09.07"]
+[Round "1"]
+[White "mace-new"]
+[Black "mace-master"]
+[Result "1-0"]
+[ECO "A58"]
+[GameDuration "00:00:05"]
+[GameEndTime "2024-09-07T21:12:28.264 BST"]
+[GameStartTime "2024-09-07T21:12:22.736 BST"]
+[Opening "Benko gambit accepted"]
+[PlyCount "13"]
+[Termination "time forfeit"]
+[TimeControl "5+0.01"]
+
+1. d4 {book} Nf6 {book} 2. c4 {book} c5 {book} 3. d5 {book} b5 {book}
+4. cxb5 {book} a6 {book} 5. bxa6 {book} g6 {book} 6. Nc3 {book} Bxa6 {book}
+7. Nf3 {Black loses on time} 1-0
+
+[Event "?"]
+[Site "?"]
+[Date "2024.09.07"]
+[Round "1"]
+[White "mace-master"]
+[Black "mace-new"]
+[Result "0-1"]
+[ECO "A58"]
+[GameDuration "00:00:08"]
+[GameEndTime "2024-09-07T21:12:36.560 BST"]
+[GameStartTime "2024-09-07T21:12:28.265 BST"]
+[Opening "Benko gambit accepted"]
+[PlyCount "14"]
+[Termination "time forfeit"]
+[TimeControl "5+0.01"]
+
+1. d4 {book} Nf6 {book} 2. c4 {book} c5 {book} 3. d5 {book} b5 {book}
+4. cxb5 {book} a6 {book} 5. bxa6 {book} g6 {book} 6. Nc3 {book} Bxa6 {book}
+7. Qd4 {5.0s} cxd4 {White loses on time} 0-1
+
+[Event "?"]
+[Site "?"]
+[Date "2024.09.07"]
+[Round "1"]
+[White "mace-new"]
+[Black "mace-master"]
+[Result "1-0"]
+[ECO "A65"]
+[GameDuration "00:00:11"]
+[GameEndTime "2024-09-07T21:12:41.574 BST"]
+[GameStartTime "2024-09-07T21:12:30.328 BST"]
+[Opening "Benoni"]
+[PlyCount "13"]
+[Termination "time forfeit"]
+[TimeControl "5+0.01"]
+[Variation "6.e4"]
+
+1. d4 {book} Nf6 {book} 2. c4 {book} c5 {book} 3. d5 {book} e6 {book}
+4. Nc3 {book} exd5 {book} 5. cxd5 {book} d6 {book} 6. e4 {book} g6 {book}
+7. Bg5 {Black loses on time} 1-0
+
+[Event "?"]
+[Site "?"]
+[Date "2024.09.07"]
+[Round "1"]
+[White "mace-master"]
+[Black "mace-new"]
+[Result "0-1"]
+[ECO "A65"]
+[GameDuration "00:00:11"]
+[GameEndTime "2024-09-07T21:12:46.329 BST"]
+[GameStartTime "2024-09-07T21:12:34.794 BST"]
+[Opening "Benoni"]
+[PlyCount "12"]
+[Termination "time forfeit"]
+[TimeControl "5+0.01"]
+[Variation "6.e4"]
+
+1. d4 {book} Nf6 {book} 2. c4 {book} c5 {book} 3. d5 {book} e6 {book}
+4. Nc3 {book} exd5 {book} 5. cxd5 {book} d6 {book} 6. e4 {book}
+g6 {book, White loses on time} 0-1
+
+[Event "?"]
+[Site "?"]
+[Date "2024.09.07"]
+[Round "1"]
+[White "mace-new"]
+[Black "mace-master"]
+[Result "1-0"]
+[ECO "A81"]
+[GameDuration "00:00:09"]
+[GameEndTime "2024-09-07T21:12:45.774 BST"]
+[GameStartTime "2024-09-07T21:12:36.562 BST"]
+[Opening "Dutch defense"]
+[PlyCount "15"]
+[Termination "time forfeit"]
+[TimeControl "5+0.01"]
+
+1. d4 {book} f5 {book} 2. g3 {book} Nf6 {book} 3. Bg2 {book} g6 {book}
+4. Nf3 {book} Bg7 {book} 5. O-O {book} O-O {book} 6. c4 {book} d6 {book}
+7. Nc3 {book} Qe8 {book} 8. d5 {book, Black loses on time} 1-0
+
+[Event "?"]
+[Site "?"]
+[Date "2024.09.07"]
+[Round "1"]
+[White "mace-master"]
+[Black "mace-new"]
+[Result "0-1"]
+[ECO "A81"]
+[GameDuration "00:00:12"]
+[GameEndTime "2024-09-07T21:12:54.543 BST"]
+[GameStartTime "2024-09-07T21:12:41.576 BST"]
+[Opening "Dutch defense"]
+[PlyCount "16"]
+[Termination "time forfeit"]
+[TimeControl "5+0.01"]
+
+1. d4 {book} f5 {book} 2. g3 {book} Nf6 {book} 3. Bg2 {book} g6 {book}
+4. Nf3 {book} Bg7 {book} 5. O-O {book} O-O {book} 6. c4 {book} d6 {book}
+7. Nc3 {book} Qe8 {book} 8. d5 {book} Ne4 {White loses on time} 0-1
+
+[Event "?"]
+[Site "?"]
+[Date "2024.09.07"]
+[Round "1"]
+[White "mace-new"]
+[Black "mace-master"]
+[Result "1-0"]
+[ECO "A81"]
+[GameDuration "00:00:10"]
+[GameEndTime "2024-09-07T21:12:56.394 BST"]
+[GameStartTime "2024-09-07T21:12:45.775 BST"]
+[Opening "Dutch defense"]
+[PlyCount "15"]
+[Termination "time forfeit"]
+[TimeControl "5+0.01"]
+
+1. d4 {book} f5 {book} 2. g3 {book} Nf6 {book} 3. Bg2 {book} e6 {book}
+4. c4 {book} d5 {book} 5. Nf3 {book} c6 {book} 6. O-O {book} Bd6 {book}
+7. b3 {book} Qe7 {book} 8. Bg5 {Black loses on time} 1-0
+
+[Event "?"]
+[Site "?"]
+[Date "2024.09.07"]
+[Round "1"]
+[White "mace-master"]
+[Black "mace-new"]
+[Result "0-1"]
+[ECO "A81"]
+[GameDuration "00:00:09"]
+[GameEndTime "2024-09-07T21:12:55.528 BST"]
+[GameStartTime "2024-09-07T21:12:46.330 BST"]
+[Opening "Dutch defense"]
+[PlyCount "14"]
+[Termination "time forfeit"]
+[TimeControl "5+0.01"]
+
+1. d4 {book} f5 {book} 2. g3 {book} Nf6 {book} 3. Bg2 {book} e6 {book}
+4. c4 {book} d5 {book} 5. Nf3 {book} c6 {book} 6. O-O {book} Bd6 {book}
+7. b3 {book} Qe7 {book, White loses on time} 0-1
+
+[Event "?"]
+[Site "?"]
+[Date "2024.09.07"]
+[Round "1"]
+[White "mace-new"]
+[Black "mace-master"]
+[Result "1-0"]
+[ECO "B01"]
+[GameDuration "00:00:14"]
+[GameEndTime "2024-09-07T21:13:09.389 BST"]
+[GameStartTime "2024-09-07T21:12:54.545 BST"]
+[Opening "Scandinavian (centre counter) defense"]
+[PlyCount "11"]
+[Termination "time forfeit"]
+[TimeControl "5+0.01"]
+
+1. e4 {book} d5 {book} 2. exd5 {book} Qxd5 {book} 3. Nc3 {book} Qa5 {book}
+4. d4 {book} Nf6 {book} 5. Nf3 {book} c6 {book}
+6. Bc4 {book, Black loses on time} 1-0
+
+[Event "?"]
+[Site "?"]
+[Date "2024.09.07"]
+[Round "1"]
+[White "mace-master"]
+[Black "mace-new"]
+[Result "0-1"]
+[ECO "B01"]
+[GameDuration "00:00:12"]
+[GameEndTime "2024-09-07T21:13:08.255 BST"]
+[GameStartTime "2024-09-07T21:12:55.530 BST"]
+[Opening "Scandinavian (centre counter) defense"]
+[PlyCount "12"]
+[Termination "time forfeit"]
+[TimeControl "5+0.01"]
+
+1. e4 {book} d5 {book} 2. exd5 {book} Qxd5 {book} 3. Nc3 {book} Qa5 {book}
+4. d4 {book} Nf6 {book} 5. Nf3 {book} c6 {book} 6. Bc4 {book}
+Nbd7 {White loses on time} 0-1
+
+[Event "?"]
+[Site "?"]
+[Date "2024.09.07"]
+[Round "1"]
+[White "mace-new"]
+[Black "mace-master"]
+[Result "1-0"]
+[ECO "B04"]
+[GameDuration "00:00:06"]
+[GameEndTime "2024-09-07T21:13:02.945 BST"]
+[GameStartTime "2024-09-07T21:12:56.396 BST"]
+[Opening "Alekhine's defense"]
+[PlyCount "7"]
+[Termination "time forfeit"]
+[TimeControl "5+0.01"]
+[Variation "Modern variation"]
+
+1. e4 {book} Nf6 {book} 2. e5 {book} Nd5 {book} 3. d4 {book} d6 {book}
+4. Nf3 {book, Black loses on time} 1-0
+
+[Event "?"]
+[Site "?"]
+[Date "2024.09.07"]
+[Round "1"]
+[White "mace-master"]
+[Black "mace-new"]
+[Result "0-1"]
+[ECO "B04"]
+[GameDuration "00:00:07"]
+[GameEndTime "2024-09-07T21:13:10.932 BST"]
+[GameStartTime "2024-09-07T21:13:02.947 BST"]
+[Opening "Alekhine's defense"]
+[PlyCount "8"]
+[Termination "time forfeit"]
+[TimeControl "5+0.01"]
+[Variation "Modern, Larsen variation"]
+
+1. e4 {book} Nf6 {book} 2. e5 {book} Nd5 {book} 3. d4 {book} d6 {book}
+4. Nf3 {book} dxe5 {White loses on time} 0-1
+
+[Event "?"]
+[Site "?"]
+[Date "2024.09.07"]
+[Round "1"]
+[White "mace-new"]
+[Black "mace-master"]
+[Result "*"]
+[ECO "B08"]
+[GameDuration "00:00:07"]
+[GameEndTime "2024-09-07T21:13:15.481 BST"]
+[GameStartTime "2024-09-07T21:13:08.257 BST"]
+[Opening "Pirc"]
+[PlyCount "13"]
+[Termination "unterminated"]
+[TimeControl "5+0.01"]
+[Variation "Classical system, 5.Be2"]
+
+1. e4 {book} d6 {book} 2. d4 {book} Nf6 {book} 3. Nc3 {book} g6 {book}
+4. Nf3 {book} Bg7 {book} 5. Be2 {book} O-O {book} 6. O-O {book} c6 {book}
+7. Qd3 {No result} *
+
+[Event "?"]
+[Site "?"]
+[Date "2024.09.07"]
+[Round "1"]
+[White "mace-master"]
+[Black "mace-new"]
+[Result "*"]
+[ECO "B08"]
+[GameDuration "00:00:06"]
+[GameEndTime "2024-09-07T21:13:15.482 BST"]
+[GameStartTime "2024-09-07T21:13:09.390 BST"]
+[Opening "Pirc"]
+[PlyCount "12"]
+[Termination "unterminated"]
+[TimeControl "5+0.01"]
+[Variation "Classical system, 5.Be2"]
+
+1. e4 {book} d6 {book} 2. d4 {book} Nf6 {book} 3. Nc3 {book} g6 {book}
+4. Nf3 {book} Bg7 {book} 5. Be2 {book} O-O {book} 6. O-O {book}
+c6 {book, No result} *
+
+[Event "?"]
+[Site "?"]
+[Date "2024.09.07"]
+[Round "1"]
+[White "mace-new"]
+[Black "mace-master"]
+[Result "*"]
+[ECO "B09"]
+[GameDuration "00:00:04"]
+[GameEndTime "2024-09-07T21:13:15.482 BST"]
+[GameStartTime "2024-09-07T21:13:10.934 BST"]
+[Opening "Pirc"]
+[PlyCount "11"]
+[Termination "unterminated"]
+[TimeControl "5+0.01"]
+[Variation "Austrian attack"]
+
+1. e4 {book} d6 {book} 2. d4 {book} Nf6 {book} 3. Nc3 {book} g6 {book}
+4. f4 {book} Bg7 {book} 5. Nf3 {book} O-O {book} 6. Bb5 {No result} *
+
+[Event "?"]
+[Site "?"]
+[Date "2024.09.07"]
+[Round "1"]
+[White "rmace-search-pruning"]
+[Black "rmace-master"]
+[Result "1-0"]
+[ECO "A03"]
+[GameDuration "00:00:13"]
+[GameEndTime "2024-09-07T21:13:47.428 BST"]
+[GameStartTime "2024-09-07T21:13:34.393 BST"]
+[Opening "Bird's Opening"]
+[PlyCount "15"]
+[Termination "time forfeit"]
+[TimeControl "5+0.01"]
+
+1. f4 {book} d5 {book} 2. Nf3 {book} Nf6 {book} 3. b3 {book} g6 {book}
+4. Bb2 {book} Bg7 {book} 5. e3 {book} O-O {book} 6. Be2 {book} c5 {book}
+7. O-O {book} Nc6 {book} 8. Ne5 {book, Black loses on time} 1-0
+
+[Event "?"]
+[Site "?"]
+[Date "2024.09.07"]
+[Round "1"]
+[White "rmace-master"]
+[Black "rmace-search-pruning"]
+[Result "0-1"]
+[ECO "A03"]
+[GameDuration "00:00:17"]
+[GameEndTime "2024-09-07T21:13:51.396 BST"]
+[GameStartTime "2024-09-07T21:13:34.394 BST"]
+[Opening "Bird's Opening"]
+[PlyCount "16"]
+[Termination "time forfeit"]
+[TimeControl "5+0.01"]
+
+1. f4 {book} d5 {book} 2. Nf3 {book} Nf6 {book} 3. b3 {book} g6 {book}
+4. Bb2 {book} Bg7 {book} 5. e3 {book} O-O {book} 6. Be2 {book} c5 {book}
+7. O-O {book} Nc6 {book} 8. Ne5 {book} Ne4 {0.63s, White loses on time} 0-1
+
+[Event "?"]
+[Site "?"]
+[Date "2024.09.07"]
+[Round "1"]
+[White "rmace-search-pruning"]
+[Black "rmace-master"]
+[Result "1-0"]
+[ECO "A05"]
+[GameDuration "00:00:06"]
+[GameEndTime "2024-09-07T21:13:40.623 BST"]
+[GameStartTime "2024-09-07T21:13:34.396 BST"]
+[Opening "Reti"]
+[PlyCount "11"]
+[Termination "time forfeit"]
+[TimeControl "5+0.01"]
+[Variation "King's Indian attack"]
+
+1. Nf3 {book} Nf6 {book} 2. g3 {book} g6 {book} 3. Bg2 {book} Bg7 {book}
+4. O-O {book} O-O {book} 5. d3 {book} d6 {book}
+6. e4 {book, Black loses on time} 1-0
+
+[Event "?"]
+[Site "?"]
+[Date "2024.09.07"]
+[Round "1"]
+[White "rmace-master"]
+[Black "rmace-search-pruning"]
+[Result "0-1"]
+[ECO "A05"]
+[GameDuration "00:00:05"]
+[GameEndTime "2024-09-07T21:13:46.222 BST"]
+[GameStartTime "2024-09-07T21:13:40.625 BST"]
+[Opening "Reti"]
+[PlyCount "12"]
+[Termination "time forfeit"]
+[TimeControl "5+0.01"]
+[Variation "King's Indian attack"]
+
+1. Nf3 {book} Nf6 {book} 2. g3 {book} g6 {book} 3. Bg2 {book} Bg7 {book}
+4. O-O {book} O-O {book} 5. d3 {book} d6 {book} 6. e4 {book}
+e5 {White loses on time} 0-1
+
+[Event "?"]
+[Site "?"]
+[Date "2024.09.07"]
+[Round "1"]
+[White "rmace-search-pruning"]
+[Black "rmace-master"]
+[Result "1-0"]
+[ECO "A22"]
+[GameDuration "00:00:06"]
+[GameEndTime "2024-09-07T21:13:52.442 BST"]
+[GameStartTime "2024-09-07T21:13:46.224 BST"]
+[Opening "English Opening"]
+[PlyCount "7"]
+[Termination "time forfeit"]
+[TimeControl "5+0.01"]
+
+1. c4 {book} e5 {book} 2. Nc3 {book} Nf6 {book} 3. Nf3 {book} Nc6 {book}
+4. Qa4 {Black loses on time} 1-0
+
+[Event "?"]
+[Site "?"]
+[Date "2024.09.07"]
+[Round "1"]
+[White "rmace-master"]
+[Black "rmace-search-pruning"]
+[Result "0-1"]
+[ECO "A22"]
+[GameDuration "00:00:06"]
+[GameEndTime "2024-09-07T21:13:54.245 BST"]
+[GameStartTime "2024-09-07T21:13:47.430 BST"]
+[Opening "English Opening"]
+[PlyCount "8"]
+[Termination "time forfeit"]
+[TimeControl "5+0.01"]
+
+1. c4 {book} e5 {book} 2. Nc3 {book} Nf6 {book} 3. Nf3 {book} Nc6 {book}
+4. Nd4 {4.0s} exd4 {White loses on time} 0-1
+
+[Event "?"]
+[Site "?"]
+[Date "2024.09.07"]
+[Round "1"]
+[White "rmace-search-pruning"]
+[Black "rmace-master"]
+[Result "*"]
+[ECO "A30"]
+[GameDuration "00:00:05"]
+[GameEndTime "2024-09-07T21:13:57.294 BST"]
+[GameStartTime "2024-09-07T21:13:51.397 BST"]
+[Opening "English"]
+[PlyCount "19"]
+[Termination "unterminated"]
+[TimeControl "5+0.01"]
+[Variation "Symmetrical variation"]
+
+1. c4 {book} c5 {book} 2. Nf3 {book} Nf6 {book} 3. g3 {book} b6 {book}
+4. Bg2 {book} Bb7 {book} 5. Nc3 {book} e6 {book} 6. O-O {book} Be7 {book}
+7. d4 {book} cxd4 {book} 8. Qxd4 {book} d6 {book} 9. Rd1 {book} a6 {book}
+10. Bg5 {0.67s, No result} *
+
+[Event "?"]
+[Site "?"]
+[Date "2024.09.07"]
+[Round "1"]
+[White "rmace-master"]
+[Black "rmace-search-pruning"]
+[Result "*"]
+[ECO "A30"]
+[GameDuration "00:00:04"]
+[GameEndTime "2024-09-07T21:13:57.294 BST"]
+[GameStartTime "2024-09-07T21:13:52.444 BST"]
+[Opening "English"]
+[PlyCount "18"]
+[Termination "unterminated"]
+[TimeControl "5+0.01"]
+[Variation "Symmetrical variation"]
+
+1. c4 {book} c5 {book} 2. Nf3 {book} Nf6 {book} 3. g3 {book} b6 {book}
+4. Bg2 {book} Bb7 {book} 5. Nc3 {book} e6 {book} 6. O-O {book} Be7 {book}
+7. d4 {book} cxd4 {book} 8. Qxd4 {book} d6 {book} 9. Rd1 {book}
+a6 {book, No result} *
+
+[Event "?"]
+[Site "?"]
+[Date "2024.09.07"]
+[Round "1"]
+[White "rmace-search-pruning"]
+[Black "rmace-master"]
+[Result "*"]
+[ECO "A58"]
+[GameDuration "00:00:03"]
+[GameEndTime "2024-09-07T21:13:57.294 BST"]
+[GameStartTime "2024-09-07T21:13:54.247 BST"]
+[Opening "Benko gambit accepted"]
+[PlyCount "13"]
+[Termination "unterminated"]
+[TimeControl "5+0.01"]
+
+1. d4 {book} Nf6 {book} 2. c4 {book} c5 {book} 3. d5 {book} b5 {book}
+4. cxb5 {book} a6 {book} 5. bxa6 {book} g6 {book} 6. Nc3 {book} Bxa6 {book}
+7. Nf3 {No result} *
+

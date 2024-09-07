@@ -39,7 +39,7 @@ impl Move {
 
 impl Debug for Move {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?} -> {:?}", self.src, self.dst)?;
+        write!(f, "{} -> {}", self.src, self.dst)?;
 
         if let Some(promotion) = self.promote {
             write!(f, " promotes to {promotion:?}")?;

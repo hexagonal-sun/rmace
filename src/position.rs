@@ -91,6 +91,10 @@ impl Position {
         b
     }
 
+    pub fn last_move(&self) -> Option<Move> {
+        self.move_stack.last().map(|x| x.mmove)
+    }
+
     fn clr_piece_at(&mut self, p: Piece, loc: Locus) {
         self[p] = self[p].clear_piece_at(loc);
     }
