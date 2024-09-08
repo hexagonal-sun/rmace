@@ -1,7 +1,7 @@
 use std::{
     sync::{
         atomic::{AtomicBool, Ordering},
-        mpsc, Arc,
+        Arc,
     },
     thread::{self, sleep},
     time::Duration,
@@ -20,11 +20,23 @@ pub struct Search {
     deadline: Option<Duration>,
     nodes: u32,
     should_exit: Arc<AtomicBool>,
+    last_pv: Option<Vec<Move>>,
 }
 
 const INF: i32 = i32::MAX - 2;
 
 impl Search {
+    pub fn order_moves(&self, ply: u32, moves: &mut Vec<Move>) {
+        // Always investigate the corresponding node from the previous PV first
+        if let Some(ref pv) = self.last_pv {
+            if let Some(mmove) = pv.get(ply as usize) {
+                if let Some(idx) = moves.iter().position(|x| *x == *mmove) {
+                    moves.swap(idx, 0);
+                }
+            }
+        }
+    }
+
     pub fn go(mut self) -> Move {
         let deadline = self.deadline.unwrap_or(Duration::from_secs(5));
         let should_exit = self.should_exit.clone();
@@ -39,7 +51,7 @@ impl Search {
         loop {
             let mut pv = Vec::with_capacity(depth);
             self.nodes = 0;
-            let best_score = self.search(-INF, INF, depth as u32, &mut pv);
+            let best_score = self.search(-INF, INF, 0, depth as u32, &mut pv);
 
             // Take the last move from the previous iteration, since when the
             // exit flag is true, we didn't complete the search.
@@ -48,12 +60,12 @@ impl Search {
             }
 
             best_move = pv.last().copied();
+            pv.reverse();
 
             println!(
                 "info depth {} pv {} score {} cp nodes {}",
                 depth,
                 pv.iter()
-                    .rev()
                     .map(|x| UciMove::from(*x))
                     .fold(String::new(), |mut accum, x| {
                         accum.push_str(&format!("{} ", x).to_owned());
@@ -62,11 +74,13 @@ impl Search {
                 best_score,
                 self.nodes,
             );
+
+            self.last_pv = Some(pv);
             depth += 1;
         }
     }
 
-    fn search(&mut self, mut alpha: i32, beta: i32, depth: u32, pv: &mut Vec<Move>) -> i32 {
+    fn search(&mut self, mut alpha: i32, beta: i32, ply: u32, depth: u32, pv: &mut Vec<Move>) -> i32 {
         if depth == 0 {
             let eval = Evaluator::eval(&self.pos);
             return if self.pos.to_play() == Colour::White {
@@ -76,7 +90,8 @@ impl Search {
             };
         }
 
-        let mmoves = self.pos.movegen();
+        let mut mmoves = self.pos.movegen();
+        self.order_moves(ply, &mut mmoves);
 
         // Checkmate detection.
         if mmoves.len() == 0 {
@@ -87,7 +102,7 @@ impl Search {
 
         for m in mmoves {
             let token = self.pos.make_move(m);
-            let eval = -self.search(-beta, -alpha, depth - 1, &mut local_pv);
+            let eval = -self.search(-beta, -alpha, ply + 1, depth - 1, &mut local_pv);
             self.pos.undo_move(token);
 
             // Timeout detection.
@@ -125,6 +140,7 @@ impl SearchBuilder {
                 deadline: None,
                 nodes: 0,
                 should_exit: Arc::new(AtomicBool::new(false)),
+                last_pv: None,
             },
         }
     }
@@ -136,5 +152,42 @@ impl SearchBuilder {
 
     pub fn build(self) -> Search {
         self.srch
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::{
+        mmove::MoveBuilder,
+        piece::mkp,
+        position::{locus::loc, Position},
+    };
+
+    use super::SearchBuilder;
+
+    #[test]
+    fn move_ordering() {
+        let mut pos = Position::default();
+        let principle_move = MoveBuilder::new(mkp!(White, Pawn), loc!(g 2))
+            .with_dst(loc!(g 3))
+            .build();
+
+        let mut srch = SearchBuilder::new(pos.clone()).build();
+        srch.last_pv = Some(vec![
+            MoveBuilder::new(mkp!(Black, Pawn), loc!(a 3))
+                .with_dst(loc!(a 4))
+                .build(),
+            MoveBuilder::new(mkp!(Black, Pawn), loc!(a 3))
+                .with_dst(loc!(a 4))
+                .build(),
+            principle_move,
+            MoveBuilder::new(mkp!(Black, Pawn), loc!(a 3))
+                .with_dst(loc!(a 4))
+                .build(),
+        ]);
+        let mut moves = pos.movegen();
+        srch.order_moves(2, &mut moves);
+
+        assert_eq!(*moves.first().unwrap(), principle_move);
     }
 }
