@@ -27,6 +27,7 @@ impl Position {
             || self.loc_attacked_by_knight(l, c)
             || self.loc_attacked_by_rook(l, c)
             || self.loc_attacked_by_pawn(l, c)
+            || self.loc_attacked_by_king(l, c)
     }
 
     fn in_check(&self, colour: Colour) -> bool {
@@ -215,5 +216,16 @@ mod tests {
         .fold(0, |accum, (_, x)| accum + x);
 
         assert_eq!(perft_res, 3894594);
+    }
+
+    #[test]
+    fn perft_pos6() {
+        let perft_res = Position::from_fen("8/4r3/4kp2/5b2/r1K2B1P/8/8/8 w - - 3 42")
+            .unwrap()
+            .perft(3)
+            .iter()
+            .fold(0, |accum, (_, x)| accum + x);
+
+        assert_eq!(perft_res, 1714);
     }
 }

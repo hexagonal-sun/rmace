@@ -2,7 +2,7 @@ use paste::paste;
 
 use crate::{
     mmove::{CastlingMoveType, Move, MoveBuilder},
-    piece::{Piece, PieceKind},
+    piece::{Colour, Piece, PieceKind},
     position::{
         bitboard::BitBoard,
         locus::{loc, File, Locus},
@@ -148,6 +148,10 @@ impl Position {
         }
 
         ret
+    }
+
+    pub fn loc_attacked_by_king(&self, l: Locus, c: Colour) -> bool {
+        !(self[Piece::new(PieceKind::King, c)] & KING_MOVES[l.to_idx() as usize]).is_empty()
     }
 }
 
