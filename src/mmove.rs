@@ -35,6 +35,14 @@ impl Move {
             None
         }
     }
+
+    // Compute MVV-LVA for a given move.
+    pub fn score(self) -> u32 {
+        match self.capture {
+            Some(captured) => captured.kind().score() * 10 - self.piece.kind().score(),
+            None => 0,
+        }
+    }
 }
 
 impl Debug for Move {

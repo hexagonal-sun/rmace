@@ -28,6 +28,9 @@ const MATE: i32 = INF - 1;
 
 impl Search {
     pub fn order_moves(&self, ply: u32, moves: &mut Vec<Move>) {
+        // order captures first.
+        moves.sort_by(|x, y| y.score().cmp(&x.score()));
+
         // Always investigate the corresponding node from the previous PV first
         if let Some(ref pv) = self.last_pv {
             if let Some(mmove) = pv.get(ply as usize) {
@@ -205,6 +208,46 @@ mod test {
         ]);
         let mut moves = pos.movegen();
         srch.order_moves(2, &mut moves);
+
+        let low_val_capture = MoveBuilder::new(mkp!(Black, Queen), loc!(a 1))
+            .with_dst(loc!(b 1))
+            .with_capture(mkp!(White, Pawn));
+
+        let mid_val_capture = MoveBuilder::new(mkp!(Black, Rook), loc!(a 1))
+            .with_dst(loc!(b 1))
+            .with_capture(mkp!(White, Bishop));
+
+        let high_val_capture = MoveBuilder::new(mkp!(Black, Pawn), loc!(a 1))
+            .with_dst(loc!(b 1))
+            .with_capture(mkp!(White, Queen));
+
+        let no_capture = MoveBuilder::new(mkp!(Black, Pawn), loc!(a 1))
+            .with_dst(loc!(b 1));
+
+        let mut some_moves = vec![
+            no_capture,
+            low_val_capture,
+            mid_val_capture,
+            high_val_capture,
+        ]
+        .iter()
+        .map(|x| x.build())
+        .collect();
+
+        srch.order_moves(2, &mut some_moves);
+
+        assert_eq!(
+            some_moves,
+            vec![
+                high_val_capture,
+                mid_val_capture,
+                low_val_capture,
+                no_capture,
+            ]
+            .iter()
+            .map(|x| x.build())
+            .collect::<Vec<_>>()
+        );
 
         assert_eq!(*moves.first().unwrap(), principle_move);
     }

@@ -29,6 +29,19 @@ pub enum PieceKind {
     King,
 }
 
+impl PieceKind {
+    pub fn score(self) -> u32 {
+        match self {
+            PieceKind::Pawn => 10,
+            PieceKind::Rook => 30,
+            PieceKind::Bishop => 30,
+            PieceKind::Knight => 50,
+            PieceKind::Queen => 90,
+            PieceKind::King => 0,
+        }
+    }
+}
+
 impl Display for PieceKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let c = match *self {
