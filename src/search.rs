@@ -21,6 +21,8 @@ pub struct Search {
     nodes: u32,
 }
 
+const INF: i32 = i32::MAX - 2;
+
 impl Search {
     pub fn go(mut self) -> Move {
         let should_exit = Arc::new(AtomicBool::new(false));
@@ -35,8 +37,7 @@ impl Search {
                 loop {
                     let mut pv = Vec::with_capacity(depth);
                     self.nodes = 0;
-                    let best_score =
-                        self.search(i32::MIN, i32::MAX, depth as u32, &mut pv, &should_exit);
+                    let best_score = self.search(-INF, INF, depth as u32, &mut pv, &should_exit);
 
                     if should_exit.load(Ordering::Relaxed) {
                         return;
@@ -96,11 +97,11 @@ impl Search {
         }
 
         let mmoves = self.pos.movegen();
-        let mut best_eval = i32::MIN;
 
         // Checkmate detection.
         if mmoves.len() == 0 {
-            return best_eval;
+            println!("CHECKMATE?!?");
+            return -INF;
         }
 
         let mut local_pv = Vec::with_capacity(depth as usize);
@@ -108,6 +109,7 @@ impl Search {
         for m in mmoves {
             let token = self.pos.make_move(m);
             let eval = -self.search(-beta, -alpha, depth - 1, &mut local_pv, should_exit);
+            self.pos.undo_move(token);
 
             // Timeout detection.
             if (self.nodes & 0xfff == 0xfff) && should_exit.load(Ordering::Relaxed) {
@@ -116,20 +118,19 @@ impl Search {
 
             self.nodes += 1;
 
-            self.pos.undo_move(token);
-            if eval > best_eval {
-                best_eval = eval;
+            if eval >= beta {
+                return beta;
+            }
+
+            if eval > alpha {
+                alpha = eval;
                 pv.clear();
                 pv.extend_from_slice(&local_pv);
                 pv.push(m)
             }
-            alpha = alpha.max(eval);
-            if alpha >= beta {
-                break;
-            }
         }
 
-        best_eval
+        alpha
     }
 }
 
