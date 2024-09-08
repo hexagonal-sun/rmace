@@ -80,7 +80,6 @@ impl Search {
 
         // Checkmate detection.
         if mmoves.len() == 0 {
-            println!("CHECKMATE?!?");
             return -INF;
         }
 
