@@ -24,6 +24,7 @@ pub struct Search {
 }
 
 const INF: i32 = i32::MAX - 2;
+const MATE: i32 = INF - 1;
 
 impl Search {
     pub fn order_moves(&self, ply: u32, moves: &mut Vec<Move>) {
@@ -63,24 +64,41 @@ impl Search {
             pv.reverse();
 
             println!(
-                "info depth {} pv {} score {} cp nodes {}",
+                "info depth {} pv{} score {} cp nodes {}",
                 depth,
                 pv.iter()
                     .map(|x| UciMove::from(*x))
                     .fold(String::new(), |mut accum, x| {
-                        accum.push_str(&format!("{} ", x).to_owned());
+                        accum.push_str(&format!(" {}", x).to_owned());
                         accum
                     }),
-                best_score,
+                if best_score == MATE {
+                    format!("mate {}", pv.len().div_ceil(2))
+                } else if best_score == -MATE {
+                    format!("mate -{}", pv.len().div_ceil(2))
+                } else {
+                    format!("{}", best_score)
+                },
                 self.nodes,
             );
+
+            if best_score == MATE || best_score == -MATE {
+                return best_move.unwrap();
+            }
 
             self.last_pv = Some(pv);
             depth += 1;
         }
     }
 
-    fn search(&mut self, mut alpha: i32, beta: i32, ply: u32, depth: u32, pv: &mut Vec<Move>) -> i32 {
+    fn search(
+        &mut self,
+        mut alpha: i32,
+        beta: i32,
+        ply: u32,
+        depth: u32,
+        pv: &mut Vec<Move>,
+    ) -> i32 {
         if depth == 0 {
             let eval = Evaluator::eval(&self.pos);
             return if self.pos.to_play() == Colour::White {
@@ -95,7 +113,7 @@ impl Search {
 
         // Checkmate detection.
         if mmoves.len() == 0 {
-            return -INF;
+            return -MATE;
         }
 
         let mut local_pv = Vec::with_capacity(depth as usize);
