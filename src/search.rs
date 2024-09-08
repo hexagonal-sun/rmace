@@ -26,65 +26,47 @@ const INF: i32 = i32::MAX - 2;
 
 impl Search {
     pub fn go(mut self) -> Move {
-        let (tx, rx) = mpsc::channel();
         let deadline = self.deadline.unwrap_or(Duration::from_secs(5));
         let should_exit = self.should_exit.clone();
+        let mut best_move = None;
 
-        {
-            thread::spawn(move || {
-                let mut depth = 1;
-                loop {
-                    let mut pv = Vec::with_capacity(depth);
-                    self.nodes = 0;
-                    let best_score = self.search(-INF, INF, depth as u32, &mut pv);
+        thread::spawn(move || {
+            sleep(deadline);
+            should_exit.store(true, Ordering::Relaxed);
+        });
 
-                    if self.should_exit.load(Ordering::Relaxed) {
-                        return;
-                    }
-
-                    let best_move = pv.last().copied().unwrap();
-                    println!(
-                        "info depth {} pv {} score {} cp nodes {}",
-                        depth,
-                        pv.iter().rev().map(|x| UciMove::from(*x)).fold(
-                            String::new(),
-                            |mut accum, x| {
-                                accum.push_str(&format!("{} ", x).to_owned());
-                                accum
-                            }
-                        ),
-                        best_score,
-                        self.nodes,
-                    );
-                    let _ = tx.send(best_move);
-                    depth += 1;
-                }
-            });
-        }
-
-        sleep(deadline);
-        should_exit.store(true, Ordering::Relaxed);
-
-        let mut best_move = rx.recv().unwrap();
-
+        let mut depth = 1;
         loop {
-            if let Ok(m) = rx.try_recv() {
-                best_move = m;
-            } else {
-                break;
-            }
-        }
+            let mut pv = Vec::with_capacity(depth);
+            self.nodes = 0;
+            let best_score = self.search(-INF, INF, depth as u32, &mut pv);
 
-        best_move
+            // Take the last move from the previous iteration, since when the
+            // exit flag is true, we didn't complete the search.
+            if self.should_exit.load(Ordering::Relaxed) {
+                return best_move.unwrap();
+            }
+
+            best_move = pv.last().copied();
+
+            println!(
+                "info depth {} pv {} score {} cp nodes {}",
+                depth,
+                pv.iter()
+                    .rev()
+                    .map(|x| UciMove::from(*x))
+                    .fold(String::new(), |mut accum, x| {
+                        accum.push_str(&format!("{} ", x).to_owned());
+                        accum
+                    }),
+                best_score,
+                self.nodes,
+            );
+            depth += 1;
+        }
     }
 
-    fn search(
-        &mut self,
-        mut alpha: i32,
-        beta: i32,
-        depth: u32,
-        pv: &mut Vec<Move>,
-    ) -> i32 {
+    fn search(&mut self, mut alpha: i32, beta: i32, depth: u32, pv: &mut Vec<Move>) -> i32 {
         if depth == 0 {
             let eval = Evaluator::eval(&self.pos);
             return if self.pos.to_play() == Colour::White {
