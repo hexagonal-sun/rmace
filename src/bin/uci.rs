@@ -1,13 +1,16 @@
-use std::io::{self, BufRead};
+use std::{
+    io::{self, BufRead},
+    time::Duration,
+};
 
 use anyhow::{Context, Result};
 use nom::{
     branch::alt,
     bytes::complete::tag,
-    character::complete::multispace0,
-    combinator::{map, opt},
+    character::complete::{digit1, multispace0},
+    combinator::{map, map_res, opt, recognize},
     error::ParseError,
-    multi::many1,
+    multi::{many0, many1},
     sequence::{delimited, tuple},
     Finish, IResult, Parser,
 };
@@ -16,6 +19,7 @@ use rmace::{
         fen::{parse_fen, Fen},
         uci_move::{parse_uci_move, UciMove},
     },
+    piece::Colour,
     position::Position,
     search::SearchBuilder,
 };
@@ -27,12 +31,18 @@ enum PosSpecifier {
 }
 
 #[derive(Debug)]
+enum GoSpecifier {
+    Time(Colour, Duration),
+    Inc(Colour, Duration),
+}
+
+#[derive(Debug)]
 enum UciCmd {
     Uci,
     IsReady,
     NewGame,
     Position(PosSpecifier, Option<Vec<UciMove>>),
-    Go,
+    Go(Vec<GoSpecifier>),
     Display,
 }
 
@@ -74,8 +84,52 @@ fn parse_cmd_position(input: &str) -> IResult<&str, UciCmd> {
     )(input)
 }
 
+fn parse_msec(input: &str) -> IResult<&str, Duration> {
+    map_res(recognize(digit1), |x| -> Result<Duration> {
+        let milies: u64 = str::parse(x)?;
+
+        Ok(Duration::from_millis(milies as u64))
+    })(input)
+}
+
+fn parse_time_spec(input: &str) -> IResult<&str, GoSpecifier> {
+    map(
+        tuple((alt((ws(tag("wtime")), ws(tag("btime")))), parse_msec)),
+        |(tm, msec)| {
+            let colour = if tm == "wtime" {
+                Colour::White
+            } else {
+                Colour::Black
+            };
+
+            GoSpecifier::Time(colour, msec)
+        },
+    )(input)
+}
+
+fn parse_time_inc(input: &str) -> IResult<&str, GoSpecifier> {
+    map(
+        tuple((alt((ws(tag("winc")), ws(tag("binc")))), parse_msec)),
+        |(tm, msec)| {
+            let colour = if tm == "winc" {
+                Colour::White
+            } else {
+                Colour::Black
+            };
+
+            GoSpecifier::Inc(colour, msec)
+        },
+    )(input)
+}
+
+fn parse_go_specs(input: &str) -> IResult<&str, Vec<GoSpecifier>> {
+    many0(alt((parse_time_spec, parse_time_inc)))(input)
+}
+
 fn parse_cmd_go(input: &str) -> IResult<&str, UciCmd> {
-    map(tag("go"), |_| UciCmd::Go)(input)
+    map(tuple((tag("go"), parse_go_specs)), |(_, specs)| {
+        UciCmd::Go(specs)
+    })(input)
 }
 
 fn parse_uci_cmd(input: &str) -> Result<UciCmd> {
@@ -107,7 +161,7 @@ fn main() -> Result<()> {
             UciCmd::IsReady => handle_cmd_isready(),
             UciCmd::NewGame => handle_cmd_newgame(&mut pos),
             UciCmd::Position(f, m) => handle_cmd_position(&mut pos, f, m),
-            UciCmd::Go => handle_cmd_go(&mut pos),
+            UciCmd::Go(specs) => handle_cmd_go(&mut pos, specs),
             UciCmd::Display => println!("{}", pos),
         }
     }
@@ -117,10 +171,24 @@ fn handle_cmd_newgame(pos: &mut Position) {
     *pos = Position::default();
 }
 
-fn handle_cmd_go(pos: &mut Position) {
-    let m = SearchBuilder::new(pos.clone()).build().go();
+fn handle_cmd_go(pos: &mut Position, specs: Vec<GoSpecifier>) {
+    let mut search = SearchBuilder::new(pos.clone());
 
-    println!("bestmove {}", UciMove::from(m))
+    if let Some(time_limit) = specs
+        .iter()
+        .find_map(|x| match x {
+            GoSpecifier::Time(colour, deadline) if *colour == pos.to_play() => Some(deadline),
+            _ => None,
+        })
+        .copied()
+    {
+        // TODO: Naive  time control algorithm detected!
+        search = search.with_deadline(time_limit.mul_f64(0.15));
+    }
+
+    let mmove = search.build().go();
+
+    println!("bestmove {}", UciMove::from(mmove))
 }
 
 fn handle_cmd_position(pos: &mut Position, p: PosSpecifier, m: Option<Vec<UciMove>>) {
