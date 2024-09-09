@@ -94,6 +94,46 @@ impl Search {
         }
     }
 
+    fn quiescence(&mut self, mut alpha: i32, beta: i32) -> i32 {
+        let eval = Evaluator::eval(&self.pos);
+        let stand_pat = if self.pos.to_play() == Colour::White {
+            eval
+        } else {
+            -eval
+        };
+
+        if stand_pat > beta {
+            return beta;
+        }
+
+        if alpha < stand_pat {
+            alpha = stand_pat;
+        }
+
+        if (self.nodes & 0xfff == 0xfff) && self.should_exit.load(Ordering::Relaxed) {
+            return 0;
+        }
+
+        self.nodes += 1;
+
+        let mut cap_moves = self.pos.movegen();
+        cap_moves.retain(|x| x.score() > 0);
+
+        for cap_move in cap_moves {
+            let token = self.pos.make_move(cap_move);
+            let score = -self.quiescence(-beta, -alpha);
+            self.pos.undo_move(token);
+            if score >= beta {
+                return beta;
+            }
+            if score > alpha {
+                alpha = score;
+            }
+        }
+
+        alpha
+    }
+
     fn search(
         &mut self,
         mut alpha: i32,
@@ -103,12 +143,7 @@ impl Search {
         pv: &mut Vec<Move>,
     ) -> i32 {
         if depth == 0 {
-            let eval = Evaluator::eval(&self.pos);
-            return if self.pos.to_play() == Colour::White {
-                eval
-            } else {
-                -eval
-            };
+            return self.quiescence(alpha, beta);
         }
 
         let mut mmoves = self.pos.movegen();
@@ -221,8 +256,7 @@ mod test {
             .with_dst(loc!(b 1))
             .with_capture(mkp!(White, Queen));
 
-        let no_capture = MoveBuilder::new(mkp!(Black, Pawn), loc!(a 1))
-            .with_dst(loc!(b 1));
+        let no_capture = MoveBuilder::new(mkp!(Black, Pawn), loc!(a 1)).with_dst(loc!(b 1));
 
         let mut some_moves = vec![
             no_capture,

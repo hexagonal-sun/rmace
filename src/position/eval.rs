@@ -183,7 +183,7 @@ impl<'a> Evaluator<'a> {
     fn count_material(&self) -> i32 {
         let mut ret = 0;
 
-        for kind in PieceKind::iter().filter(|x| *x != PieceKind::King) {
+        for kind in PieceKind::iter() {
             ret +=
                 self.pos[Piece::new(kind, Colour::White)].popcount() as i32 * kind.score() as i32;
             ret -=
