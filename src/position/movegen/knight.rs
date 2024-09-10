@@ -1,8 +1,10 @@
 use crate::{
-    mmove::{Move, MoveBuilder},
+    mmove::MoveBuilder,
     piece::{Colour, Piece, PieceKind},
-    position::{bitboard::BitBoard, locus::Locus, Position},
+    position::{bitboard::BitBoard, locus::Locus},
 };
+
+use super::MoveGen;
 
 const KNIGHT_MOVES: [BitBoard; 64] = calc_attack_knight();
 
@@ -59,29 +61,26 @@ const fn calc_attack_knight() -> [BitBoard; 64] {
     table
 }
 
-impl Position {
-    pub fn calc_knight_moves(&self, src: Locus) -> Vec<Move> {
-        let mut ret = Vec::new();
-        let piece = Piece::new(PieceKind::Knight, self.to_play);
-        let blockers = self.blockers();
+impl MoveGen<'_> {
+    pub fn calc_knight_moves(&mut self, src: Locus) {
+        let piece = Piece::new(PieceKind::Knight, self.position.to_play);
         let mgen = MoveBuilder::new(piece, src);
         let moves = KNIGHT_MOVES[src.to_idx() as usize];
 
-        for (op, obb) in self.iter_opponent_bbds() {
+        for (op, obb) in self.position.iter_opponent_bbds() {
             for dst in (moves & obb).iter_pieces() {
-                ret.push(mgen.with_dst(dst).with_capture(op).build())
+                self.moves.push(mgen.with_dst(dst).with_capture(op).build())
             }
         }
 
-        for dst in (moves & !(blockers & moves)).iter_pieces() {
-            ret.push(mgen.with_dst(dst).build())
+        for dst in (moves & !(self.blockers & moves)).iter_pieces() {
+            self.moves.push(mgen.with_dst(dst).build())
         }
-
-        ret
     }
 
     pub fn loc_attacked_by_knight(&self, l: Locus, c: Colour) -> bool {
-        !(self[Piece::new(PieceKind::Knight, c)] & KNIGHT_MOVES[l.to_idx() as usize]).is_empty()
+        !(self.position[Piece::new(PieceKind::Knight, c)] & KNIGHT_MOVES[l.to_idx() as usize])
+            .is_empty()
     }
 }
 
@@ -93,13 +92,13 @@ mod tests {
         position::{
             builder::PositionBuilder,
             locus::{loc, Locus},
-            movegen::test::mk_test,
+            movegen::{test::mk_test, MoveGen},
         },
     };
 
     #[test]
     fn loc_attack() {
-        let pos = PositionBuilder::new()
+        let mut pos = PositionBuilder::new()
             .with_piece_at(mkp!(White, Knight), loc!(c 4))
             .build();
 
@@ -114,11 +113,13 @@ mod tests {
             loc!(b 6),
         ];
 
+        let mut mgen = MoveGen::new(&mut pos);
+
         for loc in Locus::iter_all_squares() {
             if attacked_squares.contains(&loc) {
-                assert!(pos.loc_attacked_by_knight(loc, Colour::White));
+                assert!(mgen.loc_attacked_by_knight(loc, Colour::White));
             } else {
-                assert!(!pos.loc_attacked_by_knight(loc, Colour::White));
+                assert!(!mgen.loc_attacked_by_knight(loc, Colour::White));
             }
         }
     }

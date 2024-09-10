@@ -1,4 +1,4 @@
-use strum::{EnumCount, IntoEnumIterator};
+use strum::IntoEnumIterator;
 
 use crate::piece::{Colour, Piece, PieceKind};
 
@@ -7,8 +7,6 @@ use super::{bitboard::BitBoard, Position};
 pub struct Evaluator<'a> {
     pos: &'a Position,
 }
-
-type MatPoint = [i32; PieceKind::COUNT - 1];
 
 #[rustfmt::skip]
 const PSQT_PAWN: [[i32; 64]; 2] = calc_table([

@@ -20,7 +20,7 @@ use rmace::{
         uci_move::{parse_uci_move, UciMove},
     },
     piece::Colour,
-    position::Position,
+    position::{movegen::MoveGen, Position},
     search::SearchBuilder,
 };
 
@@ -201,7 +201,7 @@ fn handle_cmd_position(pos: &mut Position, p: PosSpecifier, m: Option<Vec<UciMov
 
     if let Some(moves) = m {
         for m in moves.iter() {
-            match pos.movegen().iter().find(|x| {
+            match MoveGen::new(pos).gen().iter().find(|x| {
                 x.src == m.src && x.dst == m.dst && x.promote.map(|x| x.kind()) == m.promote
             }) {
                 Some(x) => pos.make_move(*x).consume(),

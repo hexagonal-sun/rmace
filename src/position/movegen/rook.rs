@@ -1,11 +1,14 @@
 use crate::{
-    mmove::{Move, MoveBuilder},
+    mmove::MoveBuilder,
     piece::{Colour, Piece, PieceKind},
-    position::{bitboard::BitBoard, locus::Locus, Position},
+    position::{bitboard::BitBoard, locus::Locus},
 };
 
-use super::rays::{
-    calc_east_rays_moves, calc_north_rays_moves, calc_south_rays_moves, calc_west_rays_moves,
+use super::{
+    rays::{
+        calc_east_rays_moves, calc_north_rays_moves, calc_south_rays_moves, calc_west_rays_moves,
+    },
+    MoveGen,
 };
 
 fn rays(src: Locus, blockers: BitBoard) -> BitBoard {
@@ -15,34 +18,33 @@ fn rays(src: Locus, blockers: BitBoard) -> BitBoard {
         | calc_west_rays_moves(src, blockers)
 }
 
-impl Position {
-    pub fn calc_rook_moves(&self, src: Locus) -> Vec<Move> {
-        let p = Piece::new(PieceKind::Rook, self.to_play);
-        let our_pieces = self.all_pieces_for_colour(self.to_play);
-        let their_pieces = self.all_pieces_for_colour(self.to_play.next());
-        let mut moves = Vec::new();
+impl MoveGen<'_> {
+    pub fn calc_rook_moves(&mut self, src: Locus) {
+        let p = Piece::new(PieceKind::Rook, self.position.to_play);
+        let our_pieces = self.position.all_pieces_for_colour(self.position.to_play);
+        let their_pieces = self
+            .position
+            .all_pieces_for_colour(self.position.to_play.next());
         let builder = MoveBuilder::new(p, src);
-        let blockers = self.blockers();
 
-        for dst in (rays(src, blockers) & !our_pieces).iter_pieces() {
+        for dst in (rays(src, self.blockers) & !our_pieces).iter_pieces() {
             let mut m = builder.with_dst(dst);
 
             if their_pieces.has_piece_at(dst) {
                 let piece = self
+                    .position
                     .piece_at_loc(dst)
                     .expect("their_pieces bb has piece at loc");
 
                 m = m.with_capture(piece);
             }
 
-            moves.push(m.build());
+            self.moves.push(m.build());
         }
-
-        moves
     }
 
     pub fn loc_attacked_by_rook(&self, l: Locus, c: Colour) -> bool {
-        !(self[Piece::new(PieceKind::Rook, c)] & rays(l, self.blockers())).is_empty()
+        !(self.position[Piece::new(PieceKind::Rook, c)] & rays(l, self.blockers)).is_empty()
     }
 }
 
@@ -54,13 +56,13 @@ mod tests {
         position::{
             builder::PositionBuilder,
             locus::{loc, Locus},
-            movegen::test::mk_test,
+            movegen::{test::mk_test, MoveGen},
         },
     };
 
     #[test]
     fn loc_attack() {
-        let pos = PositionBuilder::new()
+        let mut pos = PositionBuilder::new()
             .with_piece_at(mkp!(White, Rook), loc!(c 4))
             .with_piece_at(mkp!(White, Pawn), loc!(c 6))
             .with_piece_at(mkp!(Black, Pawn), loc!(f 4))
@@ -79,11 +81,13 @@ mod tests {
             loc!(f 4),
         ];
 
+        let mgen = MoveGen::new(&mut pos);
+
         for loc in Locus::iter_all_squares() {
             if attacked_squares.contains(&loc) {
-                assert!(pos.loc_attacked_by_rook(loc, Colour::White));
+                assert!(mgen.loc_attacked_by_rook(loc, Colour::White));
             } else {
-                assert!(!pos.loc_attacked_by_rook(loc, Colour::White));
+                assert!(!mgen.loc_attacked_by_rook(loc, Colour::White));
             }
         }
     }

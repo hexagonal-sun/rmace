@@ -12,11 +12,13 @@ macro_rules! mk_test {
             let moves = [
                 $($moves),+
             ];
-            let p = PositionBuilder::new()
+            let mut p = PositionBuilder::new()
                 $(.with_piece_at(mkp!(White, Pawn), $blockers))*
                 $(.with_piece_at(mkp!(Black, Pawn), $attacks))*
                 .build();
-            let calculated_moves = p.$calc(src);
+            let mut mg = crate::position::movegen::MoveGen::new(&mut p);
+            mg.$calc(src);
+            let calculated_moves = mg.moves;
             let mgen = MoveBuilder::new(piece, src);
 
             let mut bb = crate::position::bitboard::BitBoard::empty();

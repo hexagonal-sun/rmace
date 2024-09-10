@@ -11,7 +11,11 @@ use crate::{
     mmove::Move,
     parsers::uci_move::UciMove,
     piece::Colour,
-    position::{eval::Evaluator, Position},
+    position::{
+        eval::Evaluator,
+        movegen::{MoveGen, MoveList},
+        Position,
+    },
 };
 
 #[derive(Clone)]
@@ -27,7 +31,7 @@ const INF: i32 = i32::MAX - 2;
 const MATE: i32 = INF - 1;
 
 impl Search {
-    pub fn order_moves(&self, ply: u32, moves: &mut Vec<Move>) {
+    pub fn order_moves(&self, ply: u32, moves: &mut MoveList) {
         // order captures first.
         moves.sort_by(|x, y| y.score().cmp(&x.score()));
 
@@ -116,7 +120,7 @@ impl Search {
 
         self.nodes += 1;
 
-        let mut cap_moves = self.pos.movegen();
+        let mut cap_moves = MoveGen::new(&mut self.pos).gen();
         cap_moves.retain(|x| x.score() > 0);
 
         for cap_move in cap_moves {
@@ -146,7 +150,7 @@ impl Search {
             return self.quiescence(alpha, beta);
         }
 
-        let mut mmoves = self.pos.movegen();
+        let mut mmoves = MoveGen::new(&mut self.pos).gen();
         self.order_moves(ply, &mut mmoves);
 
         // Checkmate detection.
@@ -216,7 +220,11 @@ mod test {
     use crate::{
         mmove::MoveBuilder,
         piece::mkp,
-        position::{locus::loc, Position},
+        position::{
+            locus::loc,
+            movegen::{MoveGen, MoveList},
+            Position,
+        },
     };
 
     use super::SearchBuilder;
@@ -241,7 +249,7 @@ mod test {
                 .with_dst(loc!(a 4))
                 .build(),
         ]);
-        let mut moves = pos.movegen();
+        let mut moves = MoveGen::new(&mut pos).gen();
         srch.order_moves(2, &mut moves);
 
         let low_val_capture = MoveBuilder::new(mkp!(Black, Queen), loc!(a 1))
@@ -258,20 +266,16 @@ mod test {
 
         let no_capture = MoveBuilder::new(mkp!(Black, Pawn), loc!(a 1)).with_dst(loc!(b 1));
 
-        let mut some_moves = vec![
-            no_capture,
-            low_val_capture,
-            mid_val_capture,
-            high_val_capture,
-        ]
-        .iter()
-        .map(|x| x.build())
-        .collect();
+        let mut some_moves = MoveList::new();
+        some_moves.push(no_capture.build());
+        some_moves.push(low_val_capture.build());
+        some_moves.push(mid_val_capture.build());
+        some_moves.push(high_val_capture.build());
 
         srch.order_moves(2, &mut some_moves);
 
         assert_eq!(
-            some_moves,
+            some_moves.to_vec(),
             vec![
                 high_val_capture,
                 mid_val_capture,

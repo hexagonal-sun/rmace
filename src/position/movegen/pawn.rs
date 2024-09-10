@@ -1,12 +1,13 @@
 use crate::{
-    mmove::{HasDst, Move, MoveBuilder},
+    mmove::{HasDst, MoveBuilder},
     piece::{Colour, Piece, PieceKind},
     position::{
         bitboard::BitBoard,
         locus::{Locus, Rank},
-        Position,
     },
 };
+
+use super::{MoveGen, MoveList};
 
 #[derive(Clone, Copy)]
 struct PawnMove {
@@ -156,24 +157,19 @@ const fn calc_pawn_attack(l: Locus, c: Colour) -> PawnMove {
     }
 }
 
-fn add_promotions(moves: &mut Vec<Move>, builder: MoveBuilder<HasDst>, colour: Colour) {
-    for kind in PROMOTION_KINDS {
-        moves.push(
-            builder
-                .with_pawn_promotion(Piece::new(kind, colour))
-                .build(),
-        )
+impl MoveGen<'_> {
+    fn add_pawn_promotions(ml: &mut MoveList, builder: MoveBuilder<HasDst>, c: Colour) {
+        for kind in PROMOTION_KINDS {
+            ml.push(builder.with_pawn_promotion(Piece::new(kind, c)).build())
+        }
     }
-}
 
-impl Position {
-    pub fn calc_pawn_moves(&self, src: Locus) -> Vec<Move> {
-        let mut ret = Vec::new();
-        let piece = Piece::new(PieceKind::Pawn, self.to_play);
-        let blockers = self.blockers();
+    pub fn calc_pawn_moves(&mut self, src: Locus) {
+        let piece = Piece::new(PieceKind::Pawn, self.position.to_play);
+        let blockers = self.blockers;
         let mgen = MoveBuilder::new(piece, src);
 
-        let (moves, attacks) = if self.to_play == Colour::White {
+        let (moves, attacks) = if self.position.to_play == Colour::White {
             (
                 W_PAWN_MOVES[src.to_idx() as usize],
                 W_PAWN_ATTACKS[src.to_idx() as usize],
@@ -185,31 +181,31 @@ impl Position {
             )
         };
 
-        for (op, obb) in self.iter_opponent_bbds() {
+        for (op, obb) in self.position.iter_opponent_bbds() {
             for dst in (attacks.bb & obb).iter_pieces() {
                 let b = mgen.with_dst(dst).with_capture(op);
                 if attacks.promotes {
-                    add_promotions(&mut ret, b, self.to_play);
+                    Self::add_pawn_promotions(&mut self.moves, b, self.position.to_play);
                 } else {
-                    ret.push(b.build());
+                    self.moves.push(b.build());
                 }
             }
         }
 
-        let home_blocker_mask = if self.to_play == Colour::White {
+        let home_blocker_mask = if self.position.to_play == Colour::White {
             BitBoard::new(0xff0000)
         } else {
             BitBoard::new(0xff0000000000)
         };
 
-        if let Some(ep_loc) = self.en_passant {
+        if let Some(ep_loc) = self.position.en_passant {
             if attacks.bb.has_piece_at(ep_loc) {
-                ret.push(mgen.with_dst(ep_loc).build())
+                self.moves.push(mgen.with_dst(ep_loc).build())
             }
         }
 
         if !(moves.bb & blockers & home_blocker_mask).is_empty() {
-            return ret;
+            return;
         }
 
         for dst in (moves.bb & !(blockers & moves.bb)).iter_pieces() {
@@ -221,17 +217,16 @@ impl Position {
             if (src_rank == Rank::Two && dst_rank == Rank::Four)
                 || (src_rank == Rank::Seven && dst_rank == Rank::Five)
             {
-                ret.push(b.sets_ep().build());
+                self.moves.push(b.sets_ep().build());
                 continue;
             }
 
             if moves.promotes {
-                add_promotions(&mut ret, b, self.to_play);
+                Self::add_pawn_promotions(&mut self.moves, b, self.position.to_play);
             } else {
-                ret.push(b.build());
+                self.moves.push(b.build());
             }
         }
-        ret
     }
 
     pub fn loc_attacked_by_pawn(&self, l: Locus, c: Colour) -> bool {
@@ -241,7 +236,7 @@ impl Position {
             W_PAWN_ATTACKS[l.to_idx() as usize].bb
         };
 
-        !(self[Piece::new(PieceKind::Pawn, c)] & attacks).is_empty()
+        !(self.position[Piece::new(PieceKind::Pawn, c)] & attacks).is_empty()
     }
 }
 
@@ -253,18 +248,28 @@ mod tests {
         position::{
             builder::PositionBuilder,
             locus::{loc, Locus},
-            movegen::pawn::PROMOTION_KINDS,
+            movegen::{pawn::PROMOTION_KINDS, MoveGen},
             Position,
         },
     };
 
+    macro_rules! pmoves {
+        ($pos:expr, $src:expr) => {{
+            let mut mgen = MoveGen::new($pos);
+            mgen.calc_pawn_moves($src);
+            mgen.moves
+        }};
+    }
+
     #[test]
     fn loc_attack_white() {
-        let pos = PositionBuilder::new()
+        let mut pos = PositionBuilder::new()
             .with_piece_at(mkp!(White, Pawn), loc!(c 4))
             .with_piece_at(mkp!(White, Pawn), loc!(e 6))
             .with_piece_at(mkp!(White, Pawn), loc!(g 7))
             .build();
+
+        let mgen = MoveGen::new(&mut pos);
 
         for loc in Locus::iter_all_squares() {
             if loc == loc!(b 5)
@@ -274,24 +279,26 @@ mod tests {
                 || loc == loc!(f 8)
                 || loc == loc!(h 8)
             {
-                assert!(pos.loc_attacked_by_pawn(loc, Colour::White))
+                assert!(mgen.loc_attacked_by_pawn(loc, Colour::White))
             } else {
-                assert!(!pos.loc_attacked_by_pawn(loc, Colour::White))
+                assert!(!mgen.loc_attacked_by_pawn(loc, Colour::White))
             }
         }
     }
 
     #[test]
     fn loc_attack_black() {
-        let pos = PositionBuilder::new()
+        let mut pos = PositionBuilder::new()
             .with_piece_at(mkp!(Black, Pawn), loc!(c 4))
             .build();
 
+        let mgen = MoveGen::new(&mut pos);
+
         for loc in Locus::iter_all_squares() {
             if loc == loc!(b 3) || loc == loc!(d 3) {
-                assert!(pos.loc_attacked_by_pawn(loc, Colour::Black))
+                assert!(mgen.loc_attacked_by_pawn(loc, Colour::Black))
             } else {
-                assert!(!pos.loc_attacked_by_pawn(loc, Colour::Black))
+                assert!(!mgen.loc_attacked_by_pawn(loc, Colour::Black))
             }
         }
     }
@@ -300,11 +307,11 @@ mod tests {
     fn home_rank_moves() {
         let src = loc!(b 2);
         let piece = mkp!(White, Pawn);
-        let p = PositionBuilder::new()
+        let mut p = PositionBuilder::new()
             .with_piece_at(piece, src)
             .with_next_turn(Colour::White)
             .build();
-        let moves = p.calc_pawn_moves(src);
+        let moves = pmoves!(&mut p, src);
         let mgen = MoveBuilder::new(piece, src);
 
         assert_eq!(moves.len(), 2);
@@ -313,11 +320,12 @@ mod tests {
 
         let src = loc!(d 7);
         let piece = mkp!(Black, Pawn);
-        let p = PositionBuilder::new()
+        let mut p = PositionBuilder::new()
             .with_piece_at(piece, src)
             .with_next_turn(Colour::Black)
             .build();
-        let moves = p.calc_pawn_moves(src);
+
+        let moves = pmoves!(&mut p, src);
         let mgen = MoveBuilder::new(piece, src);
 
         assert_eq!(moves.len(), 2);
@@ -327,59 +335,58 @@ mod tests {
 
     #[test]
     fn home_rank_blocks() {
-        let p = PositionBuilder::new()
+        let mut p = PositionBuilder::new()
             .with_piece_at(mkp!(White, Pawn), loc!(b 2))
             .with_piece_at(mkp!(Black, Knight), loc!(b 3))
             .with_piece_at(mkp!(White, Pawn), loc!(e 2))
             .with_piece_at(mkp!(White, Queen), loc!(e 3))
             .with_next_turn(Colour::White)
             .build();
-        assert!(p.calc_pawn_moves(loc!(b 2)).is_empty());
-        assert!(p.calc_pawn_moves(loc!(e 2)).is_empty());
+        assert!(pmoves!(&mut p, loc!(b 2)).is_empty());
+        assert!(pmoves!(&mut p, loc!(e 2)).is_empty());
 
-        let p = PositionBuilder::new()
+        let mut p = PositionBuilder::new()
             .with_piece_at(mkp!(Black, Pawn), loc!(b 7))
             .with_piece_at(mkp!(White, Knight), loc!(b 6))
             .with_piece_at(mkp!(Black, Pawn), loc!(e 7))
             .with_piece_at(mkp!(Black, Queen), loc!(e 6))
             .with_next_turn(Colour::Black)
             .build();
-        assert!(p.calc_pawn_moves(loc!(b 7)).is_empty());
-        assert!(p.calc_pawn_moves(loc!(e 7)).is_empty());
+        assert!(pmoves!(&mut p, loc!(b 7)).is_empty());
+        assert!(pmoves!(&mut p, loc!(e 7)).is_empty());
     }
 
     #[test]
     fn opponent_blocks() {
-        let p = PositionBuilder::new()
+        let mut p = PositionBuilder::new()
             .with_piece_at(mkp!(White, Pawn), loc!(b 4))
             .with_piece_at(mkp!(Black, Knight), loc!(b 5))
             .with_next_turn(Colour::White)
             .build();
-        let moves = p.calc_pawn_moves(loc!(b 4));
 
-        assert_eq!(moves.len(), 0);
+        assert_eq!(pmoves!(&mut p, loc!(b 4)).len(), 0);
     }
 
     #[test]
     fn standard_moves() {
         let src = loc!(b 4);
         let piece = mkp!(White, Pawn);
-        let p = PositionBuilder::new()
+        let mut p = PositionBuilder::new()
             .with_piece_at(piece, src)
             .with_next_turn(Colour::White)
             .build();
-        let moves = p.calc_pawn_moves(src);
+        let moves = pmoves!(&mut p, src);
 
         assert_eq!(moves.len(), 1);
         assert!(moves.contains(&MoveBuilder::new(piece, src).with_dst(loc!(b 5)).build()));
 
         let src = loc!(d 5);
         let piece = mkp!(Black, Pawn);
-        let p = PositionBuilder::new()
+        let mut p = PositionBuilder::new()
             .with_piece_at(piece, src)
             .with_next_turn(Colour::Black)
             .build();
-        let moves = p.calc_pawn_moves(src);
+        let moves = pmoves!(&mut p, src);
 
         assert_eq!(moves.len(), 1);
         assert!(moves.contains(&MoveBuilder::new(piece, src).with_dst(loc!(d 4)).build()));
@@ -389,13 +396,13 @@ mod tests {
     fn attacks() {
         let src = loc!(b 4);
         let piece = mkp!(White, Pawn);
-        let p = PositionBuilder::new()
+        let mut p = PositionBuilder::new()
             .with_piece_at(piece, src)
             .with_piece_at(mkp!(Black, Pawn), loc!(a 5))
             .with_piece_at(mkp!(Black, Pawn), loc!(c 5))
             .with_next_turn(Colour::White)
             .build();
-        let moves = p.calc_pawn_moves(src);
+        let moves = pmoves!(&mut p, src);
         let mgen = MoveBuilder::new(piece, src);
 
         assert_eq!(moves.len(), 3);
@@ -407,13 +414,13 @@ mod tests {
 
         let src = loc!(d 5);
         let piece = mkp!(Black, Pawn);
-        let p = PositionBuilder::new()
+        let mut p = PositionBuilder::new()
             .with_piece_at(piece, src)
             .with_piece_at(mkp!(White, Pawn), loc!(c 4))
             .with_piece_at(mkp!(White, Pawn), loc!(e 4))
             .with_next_turn(Colour::Black)
             .build();
-        let moves = p.calc_pawn_moves(src);
+        let moves = pmoves!(&mut p, src);
         let mgen = MoveBuilder::new(piece, src);
 
         assert_eq!(moves.len(), 3);
@@ -435,19 +442,18 @@ mod tests {
                 .build(),
         )
         .consume();
-
-        assert_eq!(pos.calc_pawn_moves(loc!(a 5)).len(), 2);
+        assert_eq!(pmoves!(&mut pos, loc!(a 5)).len(), 2);
     }
 
     #[test]
     fn promotions() {
         let src = loc!(b 7);
         let piece = mkp!(White, Pawn);
-        let p = PositionBuilder::new()
+        let mut p = PositionBuilder::new()
             .with_piece_at(piece, src)
             .with_next_turn(Colour::White)
             .build();
-        let moves = p.calc_pawn_moves(src);
+        let moves = pmoves!(&mut p, src);
 
         assert_eq!(moves.len(), PROMOTION_KINDS.len());
         for k in PROMOTION_KINDS {
@@ -461,11 +467,11 @@ mod tests {
 
         let src = loc!(d 2);
         let piece = mkp!(Black, Pawn);
-        let p = PositionBuilder::new()
+        let mut p = PositionBuilder::new()
             .with_piece_at(piece, src)
             .with_next_turn(Colour::Black)
             .build();
-        let moves = p.calc_pawn_moves(src);
+        let moves = pmoves!(&mut p, src);
 
         assert_eq!(moves.len(), PROMOTION_KINDS.len());
         for k in PROMOTION_KINDS {

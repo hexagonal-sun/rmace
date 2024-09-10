@@ -81,16 +81,6 @@ impl Position {
         b
     }
 
-    pub fn blockers(&self) -> BitBoard {
-        let mut b = BitBoard::empty();
-
-        for bb in self.bboards.iter() {
-            b = b.or(*bb);
-        }
-
-        b
-    }
-
     pub fn last_move(&self) -> Option<Move> {
         self.move_stack.last().map(|x| x.mmove)
     }

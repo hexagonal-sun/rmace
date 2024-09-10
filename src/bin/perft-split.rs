@@ -10,7 +10,7 @@ use nom::{
 };
 use rmace::{
     parsers::uci_move::{parse_uci_move, UciMove},
-    position::Position,
+    position::{movegen::MoveGen, Position},
 };
 
 #[derive(clap::Parser)]
@@ -43,8 +43,7 @@ fn debug(
 
     let other_moves = read_other_perft_output()?;
 
-    let perft: Vec<_> = pos
-        .perft(depth)
+    let perft: Vec<_> = MoveGen::perft(&mut pos, depth)
         .iter()
         .map(|(m, x)| (*m, UciMove::from(*m), *x))
         .collect();
@@ -88,7 +87,7 @@ fn main() -> Result<()> {
         .context("Could not create position from FEN string")?;
 
     let now = Instant::now();
-    let perft = position.perft(args.depth);
+    let perft = MoveGen::perft(&mut position, args.depth);
     let time_taken = now.elapsed();
 
     let perft: Vec<_> = perft.iter().map(|(m, x)| (UciMove::from(*m), x)).collect();
