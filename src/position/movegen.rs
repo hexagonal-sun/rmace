@@ -117,18 +117,14 @@ impl<'a> MoveGen<'a> {
 
         let moves = MoveGen::new(pos).gen();
 
-        let threads: Vec<_> = moves
+        let results: Vec<_> = moves
             .into_iter()
             .map(|m| {
-                let mut pos = pos.clone();
-                pos.make_move(m).consume();
-                (m, thread::spawn(move || _perft(&mut pos, depth - 1)))
+                let token = pos.make_move(m);
+                let x = _perft(pos, depth - 1);
+                pos.undo_move(token);
+                (m, x)
             })
-            .collect();
-
-        let results: Vec<_> = threads
-            .into_iter()
-            .map(|(m, join)| (m, join.join().unwrap()))
             .collect();
 
         results
