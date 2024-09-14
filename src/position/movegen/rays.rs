@@ -69,7 +69,7 @@ macro_rules! mk_ray {
 
     ($dir1:ident $dir2:ident, $scan_dir:ident) => {
         paste! {
-            const [<$dir1:upper _ $dir2:upper _RAYS>]: [BitBoard; 64] = [<mk_ $dir1 _ $dir2 _rays>]();
+            pub const [<$dir1:upper _ $dir2:upper _RAYS>]: [BitBoard; 64] = [<mk_ $dir1 _ $dir2 _rays>]();
             mk_ray_move_fn!([<$dir1:upper _ $dir2:upper _RAYS>], ScanDir::$scan_dir);
             const fn [<mk_ $dir1 _ $dir2 _rays>]() -> [BitBoard; 64] {
                 let mut table = [BitBoard::empty(); 64];

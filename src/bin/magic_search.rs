@@ -1,7 +1,7 @@
 use std::{fs::File, io::Read};
 
 use itertools::Itertools;
-use rmace::position::{bitboard::BitBoard, movegen::rays::NORTH_RAYS};
+use rmace::position::{bitboard::BitBoard, movegen::rays::{EAST_RAYS, NORTH_EAST_RAYS, NORTH_RAYS, NORTH_WEST_RAYS, SOUTH_EAST_RAYS, SOUTH_RAYS, SOUTH_WEST_RAYS, WEST_RAYS}};
 
 fn search(v: u64, bbds: &Vec<BitBoard>, popcnt: u32) -> bool {
     let shift = 63 - (popcnt - 1);
@@ -57,7 +57,37 @@ fn search_ray(ray: BitBoard) {
 
 fn main() {
     for i in 0..63 {
-        println!("NORTH {}", i);
+        print!("NORTH[{}] = ", i);
         search_ray(NORTH_RAYS[i]);
+    }
+    for i in 0..63 {
+        print!("EAST[{}] = ", i);
+        search_ray(EAST_RAYS[i]);
+    }
+    for i in 0..63 {
+        print!("SOUTH[{}] = ", i);
+        search_ray(SOUTH_RAYS[i]);
+    }
+    for i in 0..63 {
+        print!("WEST[{}] = ", i);
+        search_ray(WEST_RAYS[i]);
+    }
+
+
+    for i in 0..63 {
+        print!("NORTH_EAST[{}] = ", i);
+        search_ray(NORTH_EAST_RAYS[i]);
+    }
+    for i in 0..63 {
+        print!("SOUTH_EAST[{}] = ", i);
+        search_ray(SOUTH_EAST_RAYS[i]);
+    }
+    for i in 0..63 {
+        print!("SOUTH_WEST[{}] = ", i);
+        search_ray(SOUTH_WEST_RAYS[i]);
+    }
+    for i in 0..63 {
+        print!("NORTH WEST[{}] = ", i);
+        search_ray(NORTH_WEST_RAYS[i]);
     }
 }
