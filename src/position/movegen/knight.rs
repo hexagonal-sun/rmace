@@ -113,7 +113,7 @@ mod tests {
             loc!(b 6),
         ];
 
-        let mut mgen = MoveGen::new(&mut pos);
+        let mgen = MoveGen::new(&mut pos);
 
         for loc in Locus::iter_all_squares() {
             if attacked_squares.contains(&loc) {
