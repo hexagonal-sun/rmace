@@ -15,7 +15,7 @@ mod king;
 mod knight;
 mod pawn;
 mod queen;
-mod rays;
+pub mod rays;
 mod rook;
 
 #[cfg(test)]

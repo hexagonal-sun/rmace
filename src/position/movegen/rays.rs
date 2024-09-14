@@ -41,7 +41,7 @@ macro_rules! mk_ray_move_fn {
 macro_rules! mk_ray {
     ($dir:ident, $scan_dir:ident) => {
         paste! {
-            const [<$dir:upper _RAYS>]: [BitBoard; 64] = [<mk_ $dir _rays>]();
+            pub const [<$dir:upper _RAYS>]: [BitBoard; 64] = [<mk_ $dir _rays>]();
             mk_ray_move_fn!([<$dir:upper _RAYS>], ScanDir::$scan_dir);
             const fn [<mk_ $dir _rays>]() -> [BitBoard; 64] {
                 let mut table = [BitBoard::empty(); 64];

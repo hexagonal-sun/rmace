@@ -70,6 +70,12 @@ impl Display for BitBoard {
     }
 }
 
+impl From<BitBoard> for u64 {
+    fn from(value: BitBoard) -> Self {
+        value.inner
+    }
+}
+
 impl BitBoard {
     pub const fn new(value: u64) -> Self {
         Self { inner: value }
