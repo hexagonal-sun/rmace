@@ -132,32 +132,25 @@ impl BitBoard {
     }
 
     pub fn iter_pieces(self) -> PiecesIterator {
-        PiecesIterator { bb: self, shift: 0 }
+        PiecesIterator { bb: self }
     }
 }
 
 pub struct PiecesIterator {
     bb: BitBoard,
-    shift: u32,
 }
 
 impl Iterator for PiecesIterator {
     type Item = Locus;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let x = self.bb.inner.trailing_zeros();
-
-        let locus = Locus::from_idx(self.shift as u8 + x as u8)?;
-
-        if x < 63 {
-            self.bb.inner >>= x + 1;
+        if self.bb.inner == 0 {
+            None
         } else {
-            self.bb.inner = 0;
+            let loc = self.bb.inner.trailing_zeros();
+            self.bb.inner &= !(1 << loc);
+            Some(Locus::from_idx(loc as u8).unwrap())
         }
-
-        self.shift += x + 1;
-
-        Some(locus)
     }
 }
 
