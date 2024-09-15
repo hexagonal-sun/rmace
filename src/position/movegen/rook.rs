@@ -4,19 +4,7 @@ use crate::{
     position::{bitboard::BitBoard, locus::Locus},
 };
 
-use super::{
-    rays::{
-        calc_east_rays_moves, calc_north_rays_moves, calc_south_rays_moves, calc_west_rays_moves,
-    },
-    MoveGen,
-};
-
-fn rays(src: Locus, blockers: BitBoard) -> BitBoard {
-    calc_north_rays_moves(src, blockers)
-        | calc_east_rays_moves(src, blockers)
-        | calc_south_rays_moves(src, blockers)
-        | calc_west_rays_moves(src, blockers)
-}
+use super::{magics::ROOK_TABLES, MoveGen};
 
 impl MoveGen<'_> {
     pub fn calc_rook_moves(&mut self, src: Locus) {
@@ -27,7 +15,7 @@ impl MoveGen<'_> {
             .all_pieces_for_colour(self.position.to_play.next());
         let builder = MoveBuilder::new(p, src);
 
-        for dst in (rays(src, self.blockers) & !our_pieces).iter_pieces() {
+        for dst in (ROOK_TABLES.lookup(src, self.blockers) & !our_pieces).iter_pieces() {
             let mut m = builder.with_dst(dst);
 
             if their_pieces.has_piece_at(dst) {
@@ -44,7 +32,8 @@ impl MoveGen<'_> {
     }
 
     pub fn loc_attacked_by_rook(&self, l: Locus, c: Colour) -> bool {
-        !(self.position[Piece::new(PieceKind::Rook, c)] & rays(l, self.blockers)).is_empty()
+        !(self.position[Piece::new(PieceKind::Rook, c)] & ROOK_TABLES.lookup(l, self.blockers))
+            .is_empty()
     }
 }
 

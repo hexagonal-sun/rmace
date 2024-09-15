@@ -2,9 +2,7 @@ use itertools::Itertools;
 use rand::random;
 use rmace::position::{
     bitboard::BitBoard,
-    movegen::rays::{
-        BISHOP_OCC_MASK, ROOK_OCC_MASK
-    },
+    movegen::rays::{BISHOP_OCC_MASK, ROOK_OCC_MASK},
 };
 
 fn search(v: u64, bbds: &Vec<BitBoard>, popcnt: u32, collisions: &mut Vec<bool>) -> bool {

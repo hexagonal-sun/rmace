@@ -5,23 +5,14 @@ use crate::{
 };
 
 use super::{
-    rays::{
-        calc_east_rays_moves, calc_north_east_rays_moves, calc_north_rays_moves,
-        calc_north_west_rays_moves, calc_south_east_rays_moves, calc_south_rays_moves,
-        calc_south_west_rays_moves, calc_west_rays_moves,
-    },
+    magics::{BISHOP_TABLES, ROOK_TABLES},
     MoveGen,
 };
 
 fn rays(src: Locus, blockers: BitBoard) -> BitBoard {
-    calc_north_west_rays_moves(src, blockers)
-        | calc_north_east_rays_moves(src, blockers)
-        | calc_south_west_rays_moves(src, blockers)
-        | calc_south_east_rays_moves(src, blockers)
-        | calc_north_rays_moves(src, blockers)
-        | calc_east_rays_moves(src, blockers)
-        | calc_south_rays_moves(src, blockers)
-        | calc_west_rays_moves(src, blockers)
+    ROOK_TABLES
+        .lookup(src, blockers)
+        .or(BISHOP_TABLES.lookup(src, blockers))
 }
 
 impl MoveGen<'_> {

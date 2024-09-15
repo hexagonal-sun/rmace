@@ -204,7 +204,6 @@ mk_ray!(south west, Backward, PERIMETER);
 mod tests {
     use super::{calc_north_east_rays_moves, calc_north_rays_moves, calc_north_west_rays_moves};
     use crate::position::{
-        bitboard::BitBoard,
         locus::loc,
         movegen::rays::{
             calc_east_rays_moves, calc_south_east_rays_moves, calc_south_rays_moves,
@@ -218,17 +217,17 @@ mod tests {
          blockers=$($multi_pieces:expr);+, moves=$($multi_expected_locs:expr);+) => {
             #[test]
             fn $fn_name() {
-                let bb = BitBoard::empty().set_piece_at($simple_piece_loc);
+                let bb = crate::position::bitboard::BitBoard::empty().set_piece_at($simple_piece_loc);
 
                 let bb = $ray_fn($src_loc, bb);
 
                 assert_eq!(
                     bb,
-                    BitBoard::empty()
+                    crate::position::bitboard::BitBoard::empty()
                         $(.set_piece_at($simple_expected_locs))+
                 );
 
-                let bb = BitBoard::empty()
+                let bb = crate::position::bitboard::BitBoard::empty()
                     $(.set_piece_at($multi_pieces))+;
 
                 let bb = $ray_fn($src_loc, bb);
@@ -237,7 +236,7 @@ mod tests {
 
                 assert_eq!(
                     bb,
-                    BitBoard::empty()
+                    crate::position::bitboard::BitBoard::empty()
                         $(.set_piece_at($multi_expected_locs))+
                 );
             }

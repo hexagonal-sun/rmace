@@ -11,6 +11,7 @@ use super::{bitboard::BitBoard, locus::Locus, Position};
 mod bishop;
 mod king;
 mod knight;
+mod magics;
 mod pawn;
 mod queen;
 pub mod rays;
@@ -165,7 +166,7 @@ mod tests {
 
         for pos in check_pos.iter() {
             let mut pos = Position::from_fen(pos).unwrap();
-            let mut mgen = MoveGen::new(&mut pos);
+            let mgen = MoveGen::new(&mut pos);
 
             assert!(mgen.in_check(Colour::Black));
         }

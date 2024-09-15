@@ -1,23 +1,10 @@
 use crate::{
     mmove::MoveBuilder,
     piece::{Colour, Piece, PieceKind},
-    position::{bitboard::BitBoard, locus::Locus},
+    position::locus::Locus,
 };
 
-use super::{
-    rays::{
-        calc_north_east_rays_moves, calc_north_west_rays_moves, calc_south_east_rays_moves,
-        calc_south_west_rays_moves,
-    },
-    MoveGen,
-};
-
-fn rays(src: Locus, blockers: BitBoard) -> BitBoard {
-    calc_north_west_rays_moves(src, blockers)
-        | calc_north_east_rays_moves(src, blockers)
-        | calc_south_west_rays_moves(src, blockers)
-        | calc_south_east_rays_moves(src, blockers)
-}
+use super::{magics::BISHOP_TABLES, MoveGen};
 
 impl MoveGen<'_> {
     pub fn calc_bishop_moves(&mut self, src: Locus) {
@@ -28,7 +15,7 @@ impl MoveGen<'_> {
             .all_pieces_for_colour(self.position.to_play.next());
         let builder = MoveBuilder::new(p, src);
 
-        for dst in (rays(src, self.blockers) & (!our_pieces)).iter_pieces() {
+        for dst in (BISHOP_TABLES.lookup(src, self.blockers) & (!our_pieces)).iter_pieces() {
             let mut m = builder.with_dst(dst);
 
             if their_pieces.has_piece_at(dst) {
@@ -45,7 +32,8 @@ impl MoveGen<'_> {
     }
 
     pub fn loc_attacked_by_bishop(&self, l: Locus, c: Colour) -> bool {
-        !(self.position[Piece::new(PieceKind::Bishop, c)] & rays(l, self.blockers)).is_empty()
+        !(self.position[Piece::new(PieceKind::Bishop, c)] & BISHOP_TABLES.lookup(l, self.blockers))
+            .is_empty()
     }
 }
 
