@@ -1,5 +1,3 @@
-use std::thread;
-
 use arrayvec::ArrayVec;
 use strum::IntoEnumIterator;
 
@@ -151,7 +149,7 @@ mod tests {
 
         for pos in check_pos.iter() {
             let mut pos = Position::from_fen(pos).unwrap();
-            let mut mgen = MoveGen::new(&mut pos);
+            let mgen = MoveGen::new(&mut pos);
 
             assert!(mgen.in_check(Colour::White));
         }
