@@ -1,11 +1,14 @@
-use std::{fs::File, io::Read};
-
 use itertools::Itertools;
-use rmace::position::{bitboard::BitBoard, movegen::rays::{EAST_RAYS, NORTH_EAST_RAYS, NORTH_RAYS, NORTH_WEST_RAYS, SOUTH_EAST_RAYS, SOUTH_RAYS, SOUTH_WEST_RAYS, WEST_RAYS}};
+use rand::random;
+use rmace::position::{
+    bitboard::BitBoard,
+    movegen::rays::{
+        BISHOP_OCC_MASK, ROOK_OCC_MASK
+    },
+};
 
-fn search(v: u64, bbds: &Vec<BitBoard>, popcnt: u32) -> bool {
+fn search(v: u64, bbds: &Vec<BitBoard>, popcnt: u32, collisions: &mut Vec<bool>) -> bool {
     let shift = 63 - (popcnt - 1);
-    let mut collisions = vec![false; 1 << popcnt];
     for bb in bbds.iter() {
         let idx = ((u64::from(*bb).overflowing_mul(v).0) >> shift) as usize;
         if collisions[idx] == false {
@@ -18,12 +21,18 @@ fn search(v: u64, bbds: &Vec<BitBoard>, popcnt: u32) -> bool {
     return true;
 }
 
+fn random_fewbits() -> u64 {
+    random::<u64>() & random::<u64>() & random::<u64>()
+}
+
 fn search_ray(ray: BitBoard) {
     let popcnt = ray.popcount();
-    println!(
-        "{} bit set.  Therefore, {} combinations",
-        popcnt,
-        2_u32.pow(popcnt)
+
+    eprintln!("{}", ray);
+    eprintln!(
+        "Popcount {}, looking for hash table of {}...",
+        ray.popcount(),
+        2u64.pow(ray.popcount())
     );
 
     let bit_positions = ray
@@ -40,54 +49,32 @@ fn search_ray(ray: BitBoard) {
 
     assert_eq!(bbds.len(), 1 << popcnt);
 
-    let mut f = File::open("/dev/urandom").unwrap();
-    let mut buf = [0u8; 8];
+    let mut collisions = vec![false; 1 << popcnt];
 
     loop {
-        f.read_exact(&mut buf).unwrap();
-        let n = u64::from_le_bytes(buf);
+        let n: u64 = random_fewbits();
 
-        if search(n, &bbds, popcnt) {
-            println!("Perfect hash found! 0x{n:X}");
+        if search(n, &bbds, popcnt, &mut collisions) {
+            println!("    ({popcnt}, 0x{n:X}),");
+            eprintln!("Magic 0x{n:X} found!");
             return;
         }
-    }
 
+        collisions.fill(false);
+    }
 }
 
 fn main() {
-    for i in 0..63 {
-        print!("NORTH[{}] = ", i);
-        search_ray(NORTH_RAYS[i]);
+    println!("const ROOK_MAGICS: [(usize, u64); 64] = {{");
+    for i in 0..64 {
+        search_ray(ROOK_OCC_MASK[i]);
     }
-    for i in 0..63 {
-        print!("EAST[{}] = ", i);
-        search_ray(EAST_RAYS[i]);
-    }
-    for i in 0..63 {
-        print!("SOUTH[{}] = ", i);
-        search_ray(SOUTH_RAYS[i]);
-    }
-    for i in 0..63 {
-        print!("WEST[{}] = ", i);
-        search_ray(WEST_RAYS[i]);
-    }
+    println!("}}");
 
-
-    for i in 0..63 {
-        print!("NORTH_EAST[{}] = ", i);
-        search_ray(NORTH_EAST_RAYS[i]);
+    println!("const BISHOP_MAGICS: [u64; 64] = {{");
+    for i in 0..64 {
+        eprintln!("BISHOP_OCC_MASK[{}]", i);
+        search_ray(BISHOP_OCC_MASK[i]);
     }
-    for i in 0..63 {
-        print!("SOUTH_EAST[{}] = ", i);
-        search_ray(SOUTH_EAST_RAYS[i]);
-    }
-    for i in 0..63 {
-        print!("SOUTH_WEST[{}] = ", i);
-        search_ray(SOUTH_WEST_RAYS[i]);
-    }
-    for i in 0..63 {
-        print!("NORTH WEST[{}] = ", i);
-        search_ray(NORTH_WEST_RAYS[i]);
-    }
+    println!("}}");
 }

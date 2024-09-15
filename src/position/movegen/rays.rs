@@ -1,6 +1,9 @@
 use paste::paste;
 
-use crate::position::{bitboard::BitBoard, locus::Locus};
+use crate::position::{
+    bitboard::BitBoard,
+    locus::{loc, Locus},
+};
 
 macro_rules! unwrap {
     ($e:expr $(,)*) => {
@@ -15,6 +18,52 @@ enum ScanDir {
     Forward,
     Backward,
 }
+
+const RANK_ONE: BitBoard = BitBoard::empty()
+    .set_piece_at(loc!(a 1))
+    .set_piece_at(loc!(b 1))
+    .set_piece_at(loc!(c 1))
+    .set_piece_at(loc!(d 1))
+    .set_piece_at(loc!(e 1))
+    .set_piece_at(loc!(f 1))
+    .set_piece_at(loc!(g 1))
+    .set_piece_at(loc!(h 1));
+
+const RANK_EIGHT: BitBoard = BitBoard::empty()
+    .set_piece_at(loc!(a 8))
+    .set_piece_at(loc!(b 8))
+    .set_piece_at(loc!(c 8))
+    .set_piece_at(loc!(d 8))
+    .set_piece_at(loc!(e 8))
+    .set_piece_at(loc!(f 8))
+    .set_piece_at(loc!(g 8))
+    .set_piece_at(loc!(h 8));
+
+const FILE_A: BitBoard = BitBoard::empty()
+    .set_piece_at(loc!(a 1))
+    .set_piece_at(loc!(a 2))
+    .set_piece_at(loc!(a 3))
+    .set_piece_at(loc!(a 4))
+    .set_piece_at(loc!(a 5))
+    .set_piece_at(loc!(a 6))
+    .set_piece_at(loc!(a 7))
+    .set_piece_at(loc!(a 8));
+
+const FILE_H: BitBoard = BitBoard::empty()
+    .set_piece_at(loc!(h 1))
+    .set_piece_at(loc!(h 2))
+    .set_piece_at(loc!(h 3))
+    .set_piece_at(loc!(h 4))
+    .set_piece_at(loc!(h 5))
+    .set_piece_at(loc!(h 6))
+    .set_piece_at(loc!(h 7))
+    .set_piece_at(loc!(h 8));
+
+const PERIMETER: BitBoard = BitBoard::empty()
+    .or(FILE_A)
+    .or(FILE_H)
+    .or(RANK_ONE)
+    .or(RANK_EIGHT);
 
 macro_rules! mk_ray_move_fn {
     ($rays:ident, $scan_dir:expr) => {
@@ -39,12 +88,14 @@ macro_rules! mk_ray_move_fn {
 }
 
 macro_rules! mk_ray {
-    ($dir:ident, $scan_dir:ident) => {
+    ($dir:ident, $scan_dir:ident, $occ_mask:ident) => {
         paste! {
-            pub const [<$dir:upper _RAYS>]: [BitBoard; 64] = [<mk_ $dir _rays>]();
+            pub const [<$dir:upper _RAYS>]: [BitBoard; 64] = [<mk_ $dir _rays>]().0;
+            const [<$dir:upper _OCC_RAYS>]: [BitBoard; 64] = [<mk_ $dir _rays>]().1;
             mk_ray_move_fn!([<$dir:upper _RAYS>], ScanDir::$scan_dir);
-            const fn [<mk_ $dir _rays>]() -> [BitBoard; 64] {
+            const fn [<mk_ $dir _rays>]() -> ([BitBoard; 64], [BitBoard; 64]) {
                 let mut table = [BitBoard::empty(); 64];
+                let mut occ_table = [BitBoard::empty(); 64];
 
                 let mut idx = 0;
 
@@ -59,20 +110,23 @@ macro_rules! mk_ray {
                             None => break,
                         }
                     }
+                    occ_table[idx as usize] = table[idx as usize].and($occ_mask.not());
                     idx += 1;
                 }
 
-                table
+                (table, occ_table)
             }
         }
     };
 
-    ($dir1:ident $dir2:ident, $scan_dir:ident) => {
+    ($dir1:ident $dir2:ident, $scan_dir:ident, $occ_mask:ident) => {
         paste! {
-            pub const [<$dir1:upper _ $dir2:upper _RAYS>]: [BitBoard; 64] = [<mk_ $dir1 _ $dir2 _rays>]();
+            pub const [<$dir1:upper _ $dir2:upper _RAYS>]: [BitBoard; 64] = [<mk_ $dir1 _ $dir2 _rays>]().0;
+            const [<$dir1:upper _ $dir2:upper _OCC_RAYS>]: [BitBoard; 64] = [<mk_ $dir1 _ $dir2 _rays>]().1;
             mk_ray_move_fn!([<$dir1:upper _ $dir2:upper _RAYS>], ScanDir::$scan_dir);
-            const fn [<mk_ $dir1 _ $dir2 _rays>]() -> [BitBoard; 64] {
+            const fn [<mk_ $dir1 _ $dir2 _rays>]() -> ([BitBoard; 64], [BitBoard; 64]) {
                 let mut table = [BitBoard::empty(); 64];
+                let mut occ_table = [BitBoard::empty(); 64];
 
                 let mut idx = 0;
 
@@ -90,23 +144,61 @@ macro_rules! mk_ray {
                             None => break,
                         }
                     }
+                    occ_table[idx as usize] = table[idx as usize].and($occ_mask.not());
                     idx += 1;
                 }
 
-                table
+                (table, occ_table)
             }
         }
     };
 }
 
-mk_ray!(north, Forward);
-mk_ray!(east, Forward);
-mk_ray!(south, Backward);
-mk_ray!(west, Backward);
-mk_ray!(north east, Forward);
-mk_ray!(north west, Forward);
-mk_ray!(south east, Backward);
-mk_ray!(south west, Backward);
+pub const ROOK_OCC_MASK: [BitBoard; 64] = calc_rook_occ_mask();
+pub const BISHOP_OCC_MASK: [BitBoard; 64] = calc_bishop_occ_mask();
+
+const fn calc_rook_occ_mask() -> [BitBoard; 64] {
+    let mut ret = [BitBoard::empty(); 64];
+    let mut idx = 0;
+
+    while idx < 64 {
+        ret[idx as usize] = ret[idx as usize]
+            .or(NORTH_OCC_RAYS[idx])
+            .or(EAST_OCC_RAYS[idx])
+            .or(WEST_OCC_RAYS[idx])
+            .or(SOUTH_OCC_RAYS[idx]);
+
+        idx += 1;
+    }
+
+    ret
+}
+
+const fn calc_bishop_occ_mask() -> [BitBoard; 64] {
+    let mut ret = [BitBoard::empty(); 64];
+    let mut idx = 0;
+
+    while idx < 64 {
+        ret[idx as usize] = ret[idx as usize]
+            .or(NORTH_EAST_OCC_RAYS[idx])
+            .or(NORTH_WEST_OCC_RAYS[idx])
+            .or(SOUTH_EAST_OCC_RAYS[idx])
+            .or(SOUTH_WEST_OCC_RAYS[idx]);
+
+        idx += 1;
+    }
+
+    ret
+}
+
+mk_ray!(north, Forward, RANK_EIGHT);
+mk_ray!(east, Forward, FILE_H);
+mk_ray!(south, Backward, RANK_ONE);
+mk_ray!(west, Backward, FILE_A);
+mk_ray!(north east, Forward, PERIMETER);
+mk_ray!(north west, Forward, PERIMETER);
+mk_ray!(south east, Backward, PERIMETER);
+mk_ray!(south west, Backward, PERIMETER);
 
 #[cfg(test)]
 mod tests {
