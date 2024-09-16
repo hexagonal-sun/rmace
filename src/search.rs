@@ -146,6 +146,10 @@ impl Search {
         depth: u32,
         pv: &mut Vec<Move>,
     ) -> i32 {
+        if self.pos.has_repeated() {
+            return 0;
+        }
+
         if depth == 0 {
             return self.quiescence(alpha, beta);
         }

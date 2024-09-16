@@ -96,6 +96,10 @@ impl Piece {
             Colour::Black
         }
     }
+
+    pub fn to_idx(self) -> usize {
+        self.idx as usize
+    }
 }
 
 impl Display for Piece {

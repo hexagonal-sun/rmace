@@ -67,6 +67,7 @@ impl PositionBuilder {
             pieces += self.pos[Piece::new(k, Colour::Black)].popcount() as u8;
         });
         self.pos.material_count = pieces;
+        self.pos.hash = self.pos.zobrist.from_position(&self.pos);
         self.pos
     }
 }

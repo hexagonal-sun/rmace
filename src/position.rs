@@ -10,6 +10,7 @@ use castling_rights::CastlingRights;
 use eval::Evaluator;
 use locus::{loc, File, Locus, Rank};
 use strum::{EnumCount, IntoEnumIterator};
+use zobrist::{Zobrist, ZobristKey};
 
 use crate::{
     mmove::{CastlingMoveType, Move},
@@ -23,6 +24,7 @@ pub mod eval;
 pub mod fen;
 pub mod locus;
 pub mod movegen;
+pub mod zobrist;
 
 #[must_use = "Moves must either be undone, or made permanent"]
 pub struct UndoToken;
@@ -37,6 +39,7 @@ struct UndoMove {
     ep_state: Option<Locus>,
     ep_capture: Option<Locus>,
     castling_rights: CastlingRights,
+    hash: ZobristKey,
 }
 
 #[derive(Clone, PartialEq)]
@@ -47,6 +50,8 @@ pub struct Position {
     castling_rights: CastlingRights,
     material_count: u8,
     move_stack: ArrayVec<UndoMove, 256>,
+    zobrist: Zobrist,
+    hash: ZobristKey,
 }
 
 impl Position {
@@ -87,10 +92,37 @@ impl Position {
 
     fn clr_piece_at(&mut self, p: Piece, loc: Locus) {
         self[p] = self[p].clear_piece_at(loc);
+        self.hash ^= self.zobrist.piece_loc_key(p, loc);
     }
 
     fn set_piece_at(&mut self, p: Piece, loc: Locus) {
         self[p] = self[p].set_piece_at(loc);
+        self.hash ^= self.zobrist.piece_loc_key(p, loc);
+    }
+
+    pub fn has_repeated(&self) -> bool {
+        if self.move_stack.len() < 2 {
+            return false;
+        }
+
+        let mut idx = self.move_stack.len() - 2;
+        let mut hash_repeated = 0;
+
+        loop {
+            if self.move_stack[idx].hash == self.hash {
+                hash_repeated += 1;
+
+                if hash_repeated == 2 {
+                    return true;
+                }
+            }
+
+            if idx < 2 {
+                return false;
+            }
+
+            idx -= 2;
+        }
     }
 
     pub fn make_move(&mut self, mmove: Move) -> UndoToken {
@@ -99,11 +131,10 @@ impl Position {
             ep_state: self.en_passant,
             ep_capture: None,
             castling_rights: self.castling_rights,
+            hash: self.hash,
         };
 
-        self[mmove.piece] = self[mmove.piece]
-            .clear_piece_at(mmove.src)
-            .set_piece_at(mmove.dst);
+        self.clr_piece_at(mmove.piece, mmove.src);
 
         if let Some(fallen) = mmove.capture {
             self.clr_piece_at(fallen, mmove.dst);
@@ -112,6 +143,8 @@ impl Position {
             }
             self.material_count -= 1;
         }
+
+        self.set_piece_at(mmove.piece, mmove.dst);
 
         if let Some(promotion) = mmove.promote {
             self.clr_piece_at(mmove.piece, mmove.dst);
@@ -134,14 +167,20 @@ impl Position {
             }
         }
 
+        if let Some(ep_loc) = self.en_passant {
+            self.hash ^= self.zobrist.ep_key(ep_loc);
+        }
+
         if mmove.set_ep {
             let (r, _) = mmove.src.to_rank_file();
-
-            self.en_passant = Some(if r == Rank::Two {
+            let ep_loc = if r == Rank::Two {
                 mmove.src.north().unwrap()
             } else {
                 mmove.src.south().unwrap()
-            });
+            };
+
+            self.en_passant = Some(ep_loc);
+            self.hash ^= self.zobrist.ep_key(ep_loc);
         } else {
             self.en_passant = None;
         }
@@ -150,8 +189,11 @@ impl Position {
             // Clear castling rights.
             if mmove.piece.kind() == PieceKind::King {
                 self.castling_rights[self.to_play].clear_all();
+                self.hash ^= self.zobrist.castling_rights_key(self.to_play(), loc!(a 1));
+                self.hash ^= self.zobrist.castling_rights_key(self.to_play(), loc!(h 1));
             } else if mmove.piece.kind() == PieceKind::Rook {
                 self.castling_rights.clear(self.to_play, mmove.src);
+                self.hash ^= self.zobrist.castling_rights_key(self.to_play(), mmove.src);
             }
         }
 
@@ -171,6 +213,7 @@ impl Position {
         }
 
         self.to_play = self.to_play.next();
+        //self.hash ^= self.zobrist.btm_key();
         self.move_stack.push(undo);
 
         UndoToken
@@ -225,6 +268,7 @@ impl Position {
 
         self.en_passant = undo.ep_state;
         self.castling_rights = undo.castling_rights;
+        self.hash = undo.hash;
     }
 
     pub fn empty() -> Self {
@@ -235,6 +279,8 @@ impl Position {
             castling_rights: CastlingRights::empty(),
             move_stack: ArrayVec::new(),
             material_count: 0,
+            zobrist: Zobrist::new(),
+            hash: 0,
         }
     }
 
@@ -516,5 +562,92 @@ mod tests {
 
         assert!(pos.castling_rights[Colour::Black].king_side());
         assert!(pos.castling_rights[Colour::Black].queen_side());
+    }
+
+    #[test]
+    fn repeated() {
+        let mut pos =
+            Position::from_fen("rn2kbnr/p3pppp/8/8/8/8/3PPPPP/RN2KBNR w KQkq - 0 1").unwrap();
+
+        pos.make_move(
+            MoveBuilder::new(mkp!(White, Rook), loc!(a 1))
+                .with_dst(loc!(a 4))
+                .build(),
+        )
+        .consume();
+
+        assert!(!pos.has_repeated());
+
+        pos.make_move(
+            MoveBuilder::new(mkp!(Black, Knight), loc!(g 8))
+                .with_dst(loc!(f 6))
+                .build(),
+        )
+        .consume();
+
+        assert!(!pos.has_repeated());
+
+        pos.make_move(
+            MoveBuilder::new(mkp!(White, Knight), loc!(b 1))
+                .with_dst(loc!(c 3))
+                .build(),
+        )
+        .consume();
+
+        assert!(!pos.has_repeated());
+
+        pos.make_move(
+            MoveBuilder::new(mkp!(Black, Knight), loc!(f 6))
+                .with_dst(loc!(g 8))
+                .build(),
+        )
+        .consume();
+
+        assert!(!pos.has_repeated());
+
+        pos.make_move(
+            MoveBuilder::new(mkp!(White, Knight), loc!(c 3))
+                .with_dst(loc!(b 1))
+                .build(),
+        )
+        .consume();
+
+        assert!(!pos.has_repeated());
+
+        pos.make_move(
+            MoveBuilder::new(mkp!(Black, Knight), loc!(g 8))
+                .with_dst(loc!(f 6))
+                .build(),
+        )
+        .consume();
+
+        assert!(!pos.has_repeated());
+
+        pos.make_move(
+            MoveBuilder::new(mkp!(White, Knight), loc!(b 1))
+                .with_dst(loc!(c 3))
+                .build(),
+        )
+        .consume();
+
+        assert!(!pos.has_repeated());
+
+        pos.make_move(
+            MoveBuilder::new(mkp!(Black, Knight), loc!(f 6))
+                .with_dst(loc!(g 8))
+                .build(),
+        )
+        .consume();
+
+        assert!(!pos.has_repeated());
+
+        pos.make_move(
+            MoveBuilder::new(mkp!(White, Knight), loc!(c 3))
+                .with_dst(loc!(b 1))
+                .build(),
+        )
+        .consume();
+
+        assert!(pos.has_repeated());
     }
 }
