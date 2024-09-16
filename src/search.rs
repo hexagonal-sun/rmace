@@ -71,7 +71,7 @@ impl Search {
             pv.reverse();
 
             println!(
-                "info depth {} pv{} score {} cp nodes {}",
+                "info depth {} pv{} score cp {} nodes {}",
                 depth,
                 pv.iter()
                     .map(|x| UciMove::from(*x))
@@ -153,17 +153,20 @@ impl Search {
         let mut mmoves = MoveGen::new(&mut self.pos).gen();
         self.order_moves(ply, &mut mmoves);
 
-        // Checkmate detection.
-        if mmoves.len() == 0 {
-            return -MATE;
-        }
-
         let mut local_pv = Vec::with_capacity(depth as usize);
+
+        let mut legal_moves = 0;
 
         for m in mmoves {
             let token = self.pos.make_move(m);
+            if MoveGen::new(&self.pos).in_check(self.pos.to_play().next()) {
+                self.pos.undo_move(token);
+                continue;
+            }
             let eval = -self.search(-beta, -alpha, ply + 1, depth - 1, &mut local_pv);
             self.pos.undo_move(token);
+
+            legal_moves += 1;
 
             // Timeout detection.
             if (self.nodes & 0xfff == 0xfff) && self.should_exit.load(Ordering::Relaxed) {
@@ -182,6 +185,10 @@ impl Search {
                 pv.extend_from_slice(&local_pv);
                 pv.push(m)
             }
+        }
+
+        if legal_moves == 0 {
+            return -MATE;
         }
 
         alpha

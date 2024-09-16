@@ -1,7 +1,7 @@
 use crate::{
     mmove::MoveBuilder,
     piece::{Colour, Piece, PieceKind},
-    position::{bitboard::BitBoard, locus::Locus},
+    position::locus::Locus,
 };
 
 use super::{magics::ROOK_TABLES, MoveGen};

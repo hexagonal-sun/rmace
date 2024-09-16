@@ -24,7 +24,7 @@ pub type MoveList = ArrayVec<Move, 128>;
 
 pub struct MoveGen<'a> {
     moves: MoveList,
-    position: &'a mut Position,
+    position: &'a Position,
     blockers: BitBoard,
 }
 
@@ -39,7 +39,7 @@ impl<'a> MoveGen<'a> {
         b
     }
 
-    pub fn new(position: &'a mut Position) -> Self {
+    pub fn new(position: &'a Position) -> Self {
         let blockers = Self::blockers(position);
 
         Self {
@@ -50,8 +50,6 @@ impl<'a> MoveGen<'a> {
     }
 
     pub fn gen(mut self) -> MoveList {
-        let colour = self.position.to_play();
-
         for kind in PieceKind::iter() {
             let piece = Piece::new(kind, self.position.to_play);
 
@@ -67,13 +65,6 @@ impl<'a> MoveGen<'a> {
             }
         }
 
-        self.moves.retain(|mmove| {
-            let token = self.position.make_move(*mmove);
-            let ret = !MoveGen::new(self.position).in_check(colour);
-            self.position.undo_move(token);
-            ret
-        });
-
         self.moves
     }
 
@@ -86,7 +77,7 @@ impl<'a> MoveGen<'a> {
             || self.loc_attacked_by_king(l, c)
     }
 
-    fn in_check(&self, colour: Colour) -> bool {
+    pub fn in_check(&self, colour: Colour) -> bool {
         let their_colour = colour.next();
         let king_loc = self.position[Piece::new(PieceKind::King, colour)]
             .iter_pieces()
@@ -106,6 +97,10 @@ impl<'a> MoveGen<'a> {
 
             for m in MoveGen::new(pos).gen() {
                 let token = pos.make_move(m);
+                if MoveGen::new(pos).in_check(pos.to_play().next()) {
+                    pos.undo_move(token);
+                    continue;
+                }
                 let moves = _perft(pos, depth - 1);
                 n += moves;
                 pos.undo_move(token);
@@ -114,7 +109,14 @@ impl<'a> MoveGen<'a> {
             n
         }
 
-        let moves = MoveGen::new(pos).gen();
+        let mut moves = MoveGen::new(pos).gen();
+
+        moves.retain(|mmove| {
+            let token = pos.make_move(*mmove);
+            let ret = !MoveGen::new(pos).in_check(pos.to_play().next());
+            pos.undo_move(token);
+            ret
+        });
 
         let results: Vec<_> = moves
             .into_iter()
