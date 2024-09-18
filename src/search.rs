@@ -7,6 +7,8 @@ use std::{
     time::Duration,
 };
 
+use arrayvec::ArrayVec;
+
 use crate::{
     mmove::Move,
     parsers::uci_move::UciMove,
@@ -18,13 +20,17 @@ use crate::{
     },
 };
 
+const MAX_PLY: usize = 100;
+
+type PvStack = ArrayVec<Move, MAX_PLY>;
+
 #[derive(Clone)]
 pub struct Search {
     pos: Position,
     deadline: Option<Duration>,
     nodes: u32,
     should_exit: Arc<AtomicBool>,
-    last_pv: Option<Vec<Move>>,
+    last_pv: PvStack,
 }
 
 const INF: i32 = i32::MAX - 2;
@@ -36,11 +42,9 @@ impl Search {
         moves.sort_by(|x, y| y.score().cmp(&x.score()));
 
         // Always investigate the corresponding node from the previous PV first
-        if let Some(ref pv) = self.last_pv {
-            if let Some(mmove) = pv.get(ply as usize) {
-                if let Some(idx) = moves.iter().position(|x| *x == *mmove) {
-                    moves.swap(idx, 0);
-                }
+        if let Some(mmove) = self.last_pv.get(ply as usize) {
+            if let Some(idx) = moves.iter().position(|x| *x == *mmove) {
+                moves.swap(idx, 0);
             }
         }
     }
@@ -56,8 +60,9 @@ impl Search {
         });
 
         let mut depth = 1;
+        let mut pv = PvStack::new();
+
         loop {
-            let mut pv = Vec::with_capacity(depth);
             self.nodes = 0;
             let best_score = self.search(-INF, INF, 0, depth as u32, &mut pv);
 
@@ -67,22 +72,23 @@ impl Search {
                 return best_move.unwrap();
             }
 
-            best_move = pv.last().copied();
-            pv.reverse();
+            self.last_pv = pv.clone();
+
+            best_move = self.last_pv.first().copied();
 
             println!(
                 "info depth {} pv{} score cp {} nodes {}",
                 depth,
-                pv.iter()
+                self.last_pv.iter()
                     .map(|x| UciMove::from(*x))
                     .fold(String::new(), |mut accum, x| {
                         accum.push_str(&format!(" {}", x).to_owned());
                         accum
                     }),
                 if best_score == MATE {
-                    format!("mate {}", pv.len().div_ceil(2))
+                    format!("mate {}", self.last_pv.len().div_ceil(2))
                 } else if best_score == -MATE {
-                    format!("mate -{}", pv.len().div_ceil(2))
+                    format!("mate -{}", self.last_pv.len().div_ceil(2))
                 } else {
                     format!("{}", best_score)
                 },
@@ -93,7 +99,6 @@ impl Search {
                 return best_move.unwrap();
             }
 
-            self.last_pv = Some(pv);
             depth += 1;
         }
     }
@@ -144,7 +149,7 @@ impl Search {
         beta: i32,
         ply: u32,
         depth: u32,
-        pv: &mut Vec<Move>,
+        pv: &mut PvStack,
     ) -> i32 {
         if self.pos.has_repeated() {
             return 0;
@@ -157,7 +162,7 @@ impl Search {
         let mut mmoves = MoveGen::new(&mut self.pos).gen();
         self.order_moves(ply, &mut mmoves);
 
-        let mut local_pv = Vec::with_capacity(depth as usize);
+        let mut local_pv = PvStack::new();
 
         let mut legal_moves = 0;
 
@@ -167,6 +172,7 @@ impl Search {
                 self.pos.undo_move(token);
                 continue;
             }
+            local_pv.clear();
             let eval = -self.search(-beta, -alpha, ply + 1, depth - 1, &mut local_pv);
             self.pos.undo_move(token);
 
@@ -186,8 +192,8 @@ impl Search {
             if eval > alpha {
                 alpha = eval;
                 pv.clear();
-                pv.extend_from_slice(&local_pv);
-                pv.push(m)
+                pv.push(m);
+                let _ = pv.try_extend_from_slice(&local_pv);
             }
         }
 
@@ -215,7 +221,7 @@ impl SearchBuilder {
                 deadline: None,
                 nodes: 0,
                 should_exit: Arc::new(AtomicBool::new(false)),
-                last_pv: None,
+                last_pv: ArrayVec::new(),
             },
         }
     }
@@ -232,6 +238,8 @@ impl SearchBuilder {
 
 #[cfg(test)]
 mod test {
+    use arrayvec::ArrayVec;
+
     use crate::{
         mmove::MoveBuilder,
         piece::mkp,
@@ -252,7 +260,7 @@ mod test {
             .build();
 
         let mut srch = SearchBuilder::new(pos.clone()).build();
-        srch.last_pv = Some(vec![
+        srch.last_pv = ArrayVec::from_iter(vec![
             MoveBuilder::new(mkp!(Black, Pawn), loc!(a 3))
                 .with_dst(loc!(a 4))
                 .build(),
