@@ -22,9 +22,9 @@ impl Colour {
 #[repr(u8)]
 pub enum PieceKind {
     Pawn,
-    Rook,
     Knight,
     Bishop,
+    Rook,
     Queen,
     King,
 }
@@ -32,12 +32,12 @@ pub enum PieceKind {
 impl PieceKind {
     pub fn score(self) -> u32 {
         match self {
-            PieceKind::Pawn => 10,
-            PieceKind::Rook => 30,
-            PieceKind::Bishop => 30,
-            PieceKind::Knight => 50,
-            PieceKind::Queen => 90,
-            PieceKind::King => 0,
+            PieceKind::Pawn => 100,
+            PieceKind::Knight => 300,
+            PieceKind::Bishop => 350,
+            PieceKind::Rook => 500,
+            PieceKind::Queen => 1000,
+            PieceKind::King => 10000,
         }
     }
 }

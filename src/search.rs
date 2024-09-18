@@ -39,7 +39,7 @@ const MATE: i32 = INF - 1;
 impl Search {
     pub fn order_moves(&self, ply: u32, moves: &mut MoveList) {
         // order captures first.
-        moves.sort_by(|x, y| y.score().cmp(&x.score()));
+        moves.sort_by(|x, y| y.mvv_lva().cmp(&x.mvv_lva()));
 
         // Always investigate the corresponding node from the previous PV first
         if let Some(mmove) = self.last_pv.get(ply as usize) {
@@ -126,7 +126,7 @@ impl Search {
         self.nodes += 1;
 
         let mut cap_moves = MoveGen::new(&mut self.pos).gen();
-        cap_moves.retain(|x| x.score() > 0);
+        cap_moves.retain(|x| x.capture.is_some());
 
         for cap_move in cap_moves {
             let token = self.pos.make_move(cap_move);
