@@ -192,7 +192,11 @@ impl Search {
         }
 
         if legal_moves == 0 {
-            return -MATE;
+            return if MoveGen::new(&self.pos).in_check(self.pos.to_play()) {
+                -MATE
+            } else {
+                0
+            };
         }
 
         alpha
