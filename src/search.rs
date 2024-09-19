@@ -130,6 +130,10 @@ impl Search {
 
         for cap_move in cap_moves {
             let token = self.pos.make_move(cap_move);
+            if MoveGen::new(&self.pos).in_check(self.pos.to_play().next()) {
+                self.pos.undo_move(token);
+                continue;
+            }
             let score = -self.quiescence(-beta, -alpha);
             self.pos.undo_move(token);
             if score >= beta {
