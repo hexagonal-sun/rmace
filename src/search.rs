@@ -53,10 +53,16 @@ impl Search {
         }
     }
 
+    pub fn get_initial_move(&mut self) -> Option<Move> {
+        let mut moves = MoveGen::new(&self.pos).gen();
+        moves.sort_by(|x, y| y.mvv_lva().cmp(&x.mvv_lva()));
+        moves.first().copied()
+    }
+
     pub fn go(mut self) -> Move {
         let deadline = self.deadline.unwrap_or(Duration::from_secs(5));
         let should_exit = self.should_exit.clone();
-        let mut best_move = None;
+        let mut best_move = self.get_initial_move();
 
         thread::spawn(move || {
             sleep(deadline);
