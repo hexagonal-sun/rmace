@@ -8,6 +8,7 @@ use std::{
 };
 
 use arrayvec::ArrayVec;
+use ttable::{EntryKind, TEntry, TTable};
 
 use crate::{
     mmove::Move,
@@ -20,6 +21,8 @@ use crate::{
     },
 };
 
+mod ttable;
+
 const MAX_PLY: usize = 100;
 
 type PvStack = ArrayVec<Move, MAX_PLY>;
@@ -31,6 +34,7 @@ pub struct Search {
     nodes: u32,
     should_exit: Arc<AtomicBool>,
     last_pv: PvStack,
+    ttable: TTable,
 }
 
 const INF: i32 = i32::MAX - 2;
@@ -149,6 +153,30 @@ impl Search {
     }
 
     fn search(&mut self, mut alpha: i32, beta: i32, ply: u32, depth: u32, pv: &mut PvStack) -> i32 {
+        if let Some(entry) = self.ttable.lookup(self.pos.hash()) {
+            if entry.depth >= depth {
+                match entry.kind {
+                    EntryKind::Score(m) => {
+                        pv.clear();
+                        pv.push(m);
+
+                        return entry.eval;
+                    }
+                    EntryKind::Alpha => {
+                        if entry.eval <= alpha {
+                            return alpha;
+                        }
+                    }
+                    EntryKind::Beta => {
+                        if entry.eval >= beta {
+                            return beta;
+                        }
+                    }
+                }
+            }
+        }
+
+
         if self.pos.has_repeated() {
             return 0;
         }
@@ -164,6 +192,13 @@ impl Search {
 
         let mut legal_moves = 0;
         let mut eval = -INF;
+
+        let mut tentry = TEntry {
+            hash: self.pos.hash(),
+            depth,
+            kind: EntryKind::Alpha,
+            eval,
+        };
 
         for m in mmoves {
             let token = self.pos.make_move(m);
@@ -194,6 +229,9 @@ impl Search {
             self.nodes += 1;
 
             if eval >= beta {
+                tentry.kind = EntryKind::Beta;
+                tentry.eval = beta;
+                self.ttable.insert(tentry);
                 return beta;
             }
 
@@ -201,6 +239,7 @@ impl Search {
                 alpha = eval;
                 pv.clear();
                 pv.push(m);
+                tentry.kind = EntryKind::Score(m);
                 let _ = pv.try_extend_from_slice(&local_pv);
             }
         }
@@ -212,6 +251,10 @@ impl Search {
                 0
             };
         }
+
+
+        tentry.eval = alpha;
+        self.ttable.insert(tentry);
 
         alpha
     }
@@ -230,6 +273,7 @@ impl SearchBuilder {
                 nodes: 0,
                 should_exit: Arc::new(AtomicBool::new(false)),
                 last_pv: ArrayVec::new(),
+                ttable: TTable::new(),
             },
         }
     }

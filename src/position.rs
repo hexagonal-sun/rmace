@@ -76,6 +76,10 @@ impl Position {
         None
     }
 
+    pub fn hash(&self) -> ZobristKey {
+        self.hash
+    }
+
     pub fn all_pieces_for_colour(&self, colour: Colour) -> BitBoard {
         let mut b = BitBoard::empty();
 
