@@ -187,6 +187,22 @@ impl File {
     }
 }
 
+const RF_TABLE: [(Rank, File); 64] = const {
+    let mut table = [(Rank::One, File::A); 64];
+
+    let mut i: usize = 0;
+
+    while i < 64 {
+        let rank: Rank = Rank::from_idx((i / 8) as i8);
+        let file: File = File::from_idx((i % 8) as i8);
+        table[i] = (rank, file);
+
+        i += 1;
+    }
+
+    table
+};
+
 impl Locus {
     pub const fn north(self) -> Option<Locus> {
         let pos: i8 = self.pos + 8;
@@ -245,10 +261,7 @@ impl Locus {
     }
 
     pub const fn to_rank_file(self) -> (Rank, File) {
-        let rank: Rank = Rank::from_idx(self.pos / 8);
-        let file: File = File::from_idx(self.pos % 8);
-
-        (rank, file)
+        RF_TABLE[self.pos as usize]
     }
 
     pub const fn to_bitboard(self) -> BitBoard {
