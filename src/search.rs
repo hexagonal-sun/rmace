@@ -79,12 +79,13 @@ impl Search {
             println!(
                 "info depth {} pv{} score cp {} nodes {}",
                 depth,
-                self.last_pv.iter()
-                    .map(|x| UciMove::from(*x))
-                    .fold(String::new(), |mut accum, x| {
+                self.last_pv.iter().map(|x| UciMove::from(*x)).fold(
+                    String::new(),
+                    |mut accum, x| {
                         accum.push_str(&format!(" {}", x).to_owned());
                         accum
-                    }),
+                    }
+                ),
                 if best_score == MATE {
                     format!("mate {}", self.last_pv.len().div_ceil(2))
                 } else if best_score == -MATE {
@@ -147,14 +148,7 @@ impl Search {
         alpha
     }
 
-    fn search(
-        &mut self,
-        mut alpha: i32,
-        beta: i32,
-        ply: u32,
-        depth: u32,
-        pv: &mut PvStack,
-    ) -> i32 {
+    fn search(&mut self, mut alpha: i32, beta: i32, ply: u32, depth: u32, pv: &mut PvStack) -> i32 {
         if self.pos.has_repeated() {
             return 0;
         }
@@ -169,6 +163,7 @@ impl Search {
         let mut local_pv = PvStack::new();
 
         let mut legal_moves = 0;
+        let mut eval = -INF;
 
         for m in mmoves {
             let token = self.pos.make_move(m);
@@ -176,11 +171,20 @@ impl Search {
                 self.pos.undo_move(token);
                 continue;
             }
-            local_pv.clear();
-            let eval = -self.search(-beta, -alpha, ply + 1, depth - 1, &mut local_pv);
-            self.pos.undo_move(token);
-
             legal_moves += 1;
+            local_pv.clear();
+
+            if legal_moves == 1 {
+                eval = -self.search(-beta, -alpha, ply + 1, depth - 1, &mut local_pv);
+            } else {
+                eval = -self.search(-alpha - 1, -alpha, ply + 1, depth - 1, &mut local_pv);
+
+                if (eval > alpha) && (eval < beta) {
+                    eval = -self.search(-beta, -alpha, ply + 1, depth - 1, &mut local_pv);
+                }
+            }
+
+            self.pos.undo_move(token);
 
             // Timeout detection.
             if (self.nodes & 0xfff == 0xfff) && self.should_exit.load(Ordering::Relaxed) {
