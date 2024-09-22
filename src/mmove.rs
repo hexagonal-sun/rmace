@@ -1,9 +1,6 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, marker::PhantomData, mem::MaybeUninit, ptr::addr_of_mut};
 
-use crate::{
-    piece::{Piece, PieceKind},
-    position::locus::{Locus, Rank},
-};
+use crate::{piece::Piece, position::locus::Locus};
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum CastlingMoveType {
@@ -12,14 +9,21 @@ pub enum CastlingMoveType {
 }
 
 #[derive(Clone, Copy, PartialEq)]
+pub enum MoveType {
+    Normal,
+    DoublePPush,
+    EnPassant,
+    Castle(CastlingMoveType),
+    Promote(Piece),
+}
+
+#[derive(Clone, Copy, PartialEq)]
 pub struct Move {
     pub piece: Piece,
     pub src: Locus,
     pub dst: Locus,
     pub capture: Option<Piece>,
-    pub promote: Option<Piece>,
-    pub castling_move: Option<CastlingMoveType>,
-    pub set_ep: bool,
+    pub kind: MoveType,
 }
 
 #[rustfmt::skip]
@@ -40,19 +44,6 @@ const MVV_LVA: [[i32; 12]; 12] = [
 ];
 
 impl Move {
-    pub fn ep_loc(self) -> Option<Locus> {
-        if self.set_ep {
-            let (r, _) = self.src.to_rank_file();
-            if r == Rank::Two {
-                self.src.north()
-            } else {
-                self.src.south()
-            }
-        } else {
-            None
-        }
-    }
-
     // Compute MVV-LVA for a given move.
     pub fn mvv_lva(self) -> i32 {
         match self.capture {
@@ -66,8 +57,8 @@ impl Debug for Move {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{} -> {}", self.src, self.dst)?;
 
-        if let Some(promotion) = self.promote {
-            write!(f, " promotes to {promotion:?}")?;
+        if let MoveType::Promote(p) = self.kind {
+            write!(f, " promotes to {p:?}")?;
         }
 
         if let Some(capture) = self.capture {
@@ -79,81 +70,103 @@ impl Debug for Move {
 }
 
 #[derive(Clone, Copy)]
-pub struct NeedsDst {}
+pub struct NeedsDst;
 
 #[derive(Clone, Copy)]
-pub struct HasDst {
-    dst: Locus,
-    promotion: Option<Piece>,
-    capture: Option<Piece>,
-    sets_ep: bool,
-    castling_move: Option<CastlingMoveType>,
-}
+pub struct HasDst;
 
 #[derive(Clone, Copy)]
 pub struct MoveBuilder<T: Clone + Copy> {
-    piece: Piece,
-    src: Locus,
-    extra: T,
+    mmove: MaybeUninit<Move>,
+    phantom: PhantomData<T>,
 }
 
 impl MoveBuilder<()> {
     pub fn new(piece: Piece, src: Locus) -> MoveBuilder<NeedsDst> {
+        let mut mmove: MaybeUninit<Move> = MaybeUninit::uninit();
+        let ptr = mmove.as_mut_ptr();
+
+        unsafe {
+            addr_of_mut!((*ptr).src).write(src);
+            addr_of_mut!((*ptr).piece).write(piece);
+        }
+
         MoveBuilder {
-            piece,
-            src,
-            extra: NeedsDst {},
+            mmove,
+            phantom: PhantomData,
         }
     }
 }
 
 impl MoveBuilder<NeedsDst> {
-    pub fn with_dst(self, dst: Locus) -> MoveBuilder<HasDst> {
+    pub fn with_dst(mut self, dst: Locus) -> MoveBuilder<HasDst> {
+        let ptr = self.mmove.as_mut_ptr();
+
+        unsafe {
+            addr_of_mut!((*ptr).dst).write(dst);
+            addr_of_mut!((*ptr).capture).write(None);
+            addr_of_mut!((*ptr).kind).write(MoveType::Normal);
+        }
+
         MoveBuilder {
-            piece: self.piece,
-            src: self.src,
-            extra: HasDst {
-                dst,
-                promotion: None,
-                capture: None,
-                sets_ep: false,
-                castling_move: None,
-            },
+            mmove: self.mmove,
+            phantom: PhantomData,
         }
     }
 }
 
 impl MoveBuilder<HasDst> {
     pub fn build(self) -> Move {
-        Move {
-            piece: self.piece,
-            src: self.src,
-            dst: self.extra.dst,
-            capture: self.extra.capture,
-            promote: self.extra.promotion,
-            set_ep: self.extra.sets_ep,
-            castling_move: self.extra.castling_move,
-        }
+        unsafe { self.mmove.assume_init() }
     }
 
     pub fn with_capture(mut self, piece: Piece) -> Self {
-        self.extra.capture = Some(piece);
+        let ptr = self.mmove.as_mut_ptr();
+
+        unsafe {
+            addr_of_mut!((*ptr).capture).write(Some(piece));
+        }
+
         self
     }
 
     pub fn with_pawn_promotion(mut self, piece: Piece) -> Self {
-        self.extra.promotion = Some(piece);
+        let ptr = self.mmove.as_mut_ptr();
+
+        unsafe {
+            addr_of_mut!((*ptr).kind).write(MoveType::Promote(piece));
+        }
+
         self
     }
 
-    pub fn sets_ep(mut self) -> Self {
-        assert_eq!(self.piece.kind(), PieceKind::Pawn);
-        self.extra.sets_ep = true;
+    pub fn is_en_passant_capture(mut self) -> Self {
+        let ptr = self.mmove.as_mut_ptr();
+
+        unsafe {
+            addr_of_mut!((*ptr).kind).write(MoveType::EnPassant);
+        }
+
+        self
+    }
+
+    pub fn is_double_pawn_push(mut self) -> Self {
+        let ptr = self.mmove.as_mut_ptr();
+
+        unsafe {
+            addr_of_mut!((*ptr).kind).write(MoveType::DoublePPush);
+        }
+
         self
     }
 
     pub fn is_castling_move(mut self, kind: CastlingMoveType) -> Self {
-        self.extra.castling_move = Some(kind);
+        let ptr = self.mmove.as_mut_ptr();
+
+        unsafe {
+            addr_of_mut!((*ptr).kind).write(MoveType::Castle(kind));
+        }
+
         self
     }
 }

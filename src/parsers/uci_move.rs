@@ -8,7 +8,7 @@ use nom::{
 };
 
 use crate::{
-    mmove::Move,
+    mmove::{Move, MoveType},
     piece::PieceKind,
     position::locus::{File, Locus, Rank},
 };
@@ -84,7 +84,10 @@ impl From<Move> for UciMove {
         UciMove {
             src: value.src,
             dst: value.dst,
-            promote: value.promote.map(|x| x.kind()),
+            promote: match value.kind {
+                MoveType::Promote(p) => Some(p.kind()),
+                _ => None,
+            },
         }
     }
 }

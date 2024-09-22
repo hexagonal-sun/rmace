@@ -13,7 +13,7 @@ use strum::{EnumCount, IntoEnumIterator};
 use zobrist::{Zobrist, ZobristKey};
 
 use crate::{
-    mmove::{CastlingMoveType, Move},
+    mmove::{CastlingMoveType, Move, MoveType},
     piece::{mkp, Colour, Piece, PieceKind, PieceKindIter},
 };
 
@@ -37,7 +37,6 @@ impl UndoToken {
 struct UndoMove {
     mmove: Move,
     ep_state: Option<Locus>,
-    ep_capture: Option<Locus>,
     castling_rights: CastlingRights,
     hash: ZobristKey,
 }
@@ -90,15 +89,18 @@ impl Position {
         b
     }
 
+    #[inline(always)]
     pub fn last_move(&self) -> Option<Move> {
         self.move_stack.last().map(|x| x.mmove)
     }
 
+    #[inline(always)]
     fn clr_piece_at(&mut self, p: Piece, loc: Locus) {
         self[p] = self[p].clear_piece_at(loc);
         self.hash ^= self.zobrist.piece_loc_key(p, loc);
     }
 
+    #[inline(always)]
     fn set_piece_at(&mut self, p: Piece, loc: Locus) {
         self[p] = self[p].set_piece_at(loc);
         self.hash ^= self.zobrist.piece_loc_key(p, loc);
@@ -129,95 +131,102 @@ impl Position {
         }
     }
 
+    #[inline(always)]
+    fn get_castling_rook_positions(c: Colour, kind: CastlingMoveType) -> (Locus, Locus) {
+        match (c, kind) {
+            (Colour::White, CastlingMoveType::Kingside) => (loc!(h 1), loc!(f 1)),
+            (Colour::White, CastlingMoveType::Queenside) => (loc!(a 1), loc!(d 1)),
+            (Colour::Black, CastlingMoveType::Kingside) => (loc!(h 8), loc!(f 8)),
+            (Colour::Black, CastlingMoveType::Queenside) => (loc!(a 8), loc!(d 8)),
+        }
+    }
+
+    #[inline(always)]
     pub fn make_move(&mut self, mmove: Move) -> UndoToken {
-        let mut undo = UndoMove {
+        let undo = UndoMove {
             mmove,
             ep_state: self.en_passant,
-            ep_capture: None,
             castling_rights: self.castling_rights,
             hash: self.hash,
         };
 
-        self.clr_piece_at(mmove.piece, mmove.src);
-
-        if let Some(fallen) = mmove.capture {
-            self.clr_piece_at(fallen, mmove.dst);
-            if fallen.kind() == PieceKind::Rook {
-                self.castling_rights.clear(self.to_play.next(), mmove.dst);
-            }
-            self.material_count -= 1;
-        }
-
-        self.set_piece_at(mmove.piece, mmove.dst);
-
-        if let Some(promotion) = mmove.promote {
-            self.clr_piece_at(mmove.piece, mmove.dst);
-            self.set_piece_at(promotion, mmove.dst);
-        }
-
-        if let Some(ep_loc) = self.en_passant {
-            if mmove.dst == ep_loc && mmove.piece.kind() == PieceKind::Pawn {
-                let captured_pawn_colour = self.to_play.next();
-                let captured_piece = Piece::new(PieceKind::Pawn, captured_pawn_colour);
-                let pawn_loc = if captured_pawn_colour == Colour::White {
-                    ep_loc.north().unwrap()
-                } else {
-                    ep_loc.south().unwrap()
-                };
-
-                self.clr_piece_at(captured_piece, pawn_loc);
-                self.material_count -= 1;
-                undo.ep_capture = Some(pawn_loc);
-            }
-        }
-
         if let Some(ep_loc) = self.en_passant {
             self.hash ^= self.zobrist.ep_key(ep_loc);
-        }
-
-        if mmove.set_ep {
-            let (r, _) = mmove.src.to_rank_file();
-            let ep_loc = if r == Rank::Two {
-                mmove.src.north().unwrap()
-            } else {
-                mmove.src.south().unwrap()
-            };
-
-            self.en_passant = Some(ep_loc);
-            self.hash ^= self.zobrist.ep_key(ep_loc);
-        } else {
             self.en_passant = None;
+        }
+
+        match mmove.kind {
+            MoveType::Normal => {
+                self.clr_piece_at(mmove.piece, mmove.src);
+                if let Some(p) = mmove.capture {
+                    self.clr_piece_at(p, mmove.dst);
+                }
+                self.set_piece_at(mmove.piece, mmove.dst);
+            }
+            MoveType::DoublePPush => {
+                self.clr_piece_at(mmove.piece, mmove.src);
+                let ep_loc = match mmove.piece.colour() {
+                    Colour::White => mmove.dst.south().unwrap(),
+                    Colour::Black => mmove.dst.north().unwrap(),
+                };
+                self.en_passant = Some(ep_loc);
+                self.hash ^= self.zobrist.ep_key(ep_loc);
+                self.set_piece_at(mmove.piece, mmove.dst);
+            }
+            MoveType::EnPassant => {
+                self.clr_piece_at(mmove.piece, mmove.src);
+                let c = self.to_play;
+                self.clr_piece_at(
+                    Piece::new(PieceKind::Pawn, c.next()),
+                    match c {
+                        Colour::White => mmove.dst.south().unwrap(),
+                        Colour::Black => mmove.dst.north().unwrap(),
+                    },
+                );
+                self.set_piece_at(mmove.piece, mmove.dst);
+            }
+            MoveType::Promote(promo_piece) => {
+                self.clr_piece_at(mmove.piece, mmove.src);
+                if let Some(cap_piece) = mmove.capture {
+                    self.clr_piece_at(cap_piece, mmove.dst);
+                }
+                self.set_piece_at(promo_piece, mmove.dst);
+            }
+            MoveType::Castle(castle_kind) => {
+                let (rook_src, rook_dst) =
+                    Self::get_castling_rook_positions(self.to_play, castle_kind);
+
+                let rook = Piece::new(PieceKind::Rook, self.to_play);
+                self.clr_piece_at(mmove.piece, mmove.src);
+                self.set_piece_at(mmove.piece, mmove.dst);
+                self.clr_piece_at(rook, rook_src);
+                self.set_piece_at(rook, rook_dst);
+            }
         }
 
         if self.castling_rights[self.to_play].has_any() {
             // Clear castling rights.
-            if mmove.piece.kind() == PieceKind::King {
-                self.castling_rights[self.to_play].clear_all();
-                self.hash ^= self.zobrist.castling_rights_key(self.to_play(), loc!(a 1));
-                self.hash ^= self.zobrist.castling_rights_key(self.to_play(), loc!(h 1));
-            } else if mmove.piece.kind() == PieceKind::Rook {
-                self.castling_rights.clear(self.to_play, mmove.src);
-                self.hash ^= self.zobrist.castling_rights_key(self.to_play(), mmove.src);
+            match mmove.piece.kind() {
+                PieceKind::King => {
+                    self.castling_rights[self.to_play].clear_all();
+                    self.hash ^= self.zobrist.castling_rights_key(self.to_play(), loc!(a 1));
+                    self.hash ^= self.zobrist.castling_rights_key(self.to_play(), loc!(h 1));
+                }
+                PieceKind::Rook => {
+                    self.castling_rights.clear(self.to_play, mmove.src);
+                    self.hash ^= self.zobrist.castling_rights_key(self.to_play(), mmove.src);
+                }
+                _ => {}
             }
         }
 
-        if let Some(castling_move) = mmove.castling_move {
-            let (r, _) = mmove.dst.to_rank_file();
-            let rook = Piece::new(PieceKind::Rook, self.to_play);
-            match castling_move {
-                CastlingMoveType::Kingside => {
-                    self.clr_piece_at(rook, Locus::from_rank_file(r, File::H));
-                    self.set_piece_at(rook, Locus::from_rank_file(r, File::F));
-                }
-                CastlingMoveType::Queenside => {
-                    self.clr_piece_at(rook, Locus::from_rank_file(r, File::A));
-                    self.set_piece_at(rook, Locus::from_rank_file(r, File::D));
-                }
-            }
+        if self.castling_rights[self.to_play().next()].has_any() {
+            self.castling_rights.clear(self.to_play().next(), mmove.dst);
         }
 
         self.to_play = self.to_play.next();
-        //self.hash ^= self.zobrist.btm_key();
+
+        self.hash ^= self.zobrist.btm_key();
         self.move_stack.push(undo);
 
         UndoToken
@@ -233,37 +242,47 @@ impl Position {
         let mmove = undo.mmove;
         self.to_play = self.to_play.next();
 
-        if let Some(castling_move) = mmove.castling_move {
-            let (r, _) = mmove.dst.to_rank_file();
-            let rook = Piece::new(PieceKind::Rook, self.to_play);
-            match castling_move {
-                CastlingMoveType::Kingside => {
-                    self.set_piece_at(rook, Locus::from_rank_file(r, File::H));
-                    self.clr_piece_at(rook, Locus::from_rank_file(r, File::F));
+        match mmove.kind {
+            MoveType::Normal => {
+                self.clr_piece_at(mmove.piece, mmove.dst);
+                if let Some(p) = mmove.capture {
+                    self.set_piece_at(p, mmove.dst);
                 }
-                CastlingMoveType::Queenside => {
-                    self.set_piece_at(rook, Locus::from_rank_file(r, File::A));
-                    self.clr_piece_at(rook, Locus::from_rank_file(r, File::D));
-                }
+                self.set_piece_at(mmove.piece, mmove.src);
             }
-        }
+            MoveType::DoublePPush => {
+                self.clr_piece_at(mmove.piece, mmove.dst);
+                self.set_piece_at(mmove.piece, mmove.src);
+            }
+            MoveType::EnPassant => {
+                self.clr_piece_at(mmove.piece, mmove.dst);
+                let c = self.to_play;
+                self.set_piece_at(
+                    Piece::new(PieceKind::Pawn, c.next()),
+                    match c {
+                        Colour::White => mmove.dst.south().unwrap(),
+                        Colour::Black => mmove.dst.north().unwrap(),
+                    },
+                );
+                self.set_piece_at(mmove.piece, mmove.src);
+            }
+            MoveType::Promote(promo_piece) => {
+                self.clr_piece_at(promo_piece, mmove.dst);
+                if let Some(cap_piece) = mmove.capture {
+                    self.set_piece_at(cap_piece, mmove.dst);
+                }
+                self.set_piece_at(mmove.piece, mmove.src);
+            }
+            MoveType::Castle(castle_kind) => {
+                let (rook_src, rook_dst) =
+                    Self::get_castling_rook_positions(self.to_play, castle_kind);
 
-        if let Some(promotion) = mmove.promote {
-            self.set_piece_at(mmove.piece, mmove.dst);
-            self.clr_piece_at(promotion, mmove.dst);
-        }
-
-        if let Some(fallen) = mmove.capture {
-            self.set_piece_at(fallen, mmove.dst);
-            self.material_count += 1;
-        }
-
-        if let Some(loc) = undo.ep_capture {
-            self.material_count += 1;
-            self.set_piece_at(
-                Piece::new(PieceKind::Pawn, mmove.piece.colour().next()),
-                loc,
-            )
+                let rook = Piece::new(PieceKind::Rook, self.to_play);
+                self.set_piece_at(mmove.piece, mmove.src);
+                self.clr_piece_at(mmove.piece, mmove.dst);
+                self.set_piece_at(rook, rook_src);
+                self.clr_piece_at(rook, rook_dst);
+            }
         }
 
         self[mmove.piece] = self[mmove.piece]
@@ -413,7 +432,7 @@ mod tests {
         let mut pos = Position::default();
         let mmove = MoveBuilder::new(mkp!(White, Pawn), loc!(e 2))
             .with_dst(loc!(e 4))
-            .sets_ep()
+            .is_double_pawn_push()
             .build();
 
         pos.make_move(mmove).consume();
@@ -442,7 +461,7 @@ mod tests {
         pos.make_move(
             MoveBuilder::new(mkp!(Black, Pawn), loc!(b 7))
                 .with_dst(loc!(b 5))
-                .sets_ep()
+                .is_double_pawn_push()
                 .build(),
         )
         .consume();
@@ -452,6 +471,7 @@ mod tests {
         let token = pos.make_move(
             MoveBuilder::new(mkp!(White, Pawn), loc!(a 5))
                 .with_dst(loc!(b 6))
+                .is_en_passant_capture()
                 .build(),
         );
 

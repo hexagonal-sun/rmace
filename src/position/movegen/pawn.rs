@@ -200,7 +200,8 @@ impl MoveGen<'_> {
 
         if let Some(ep_loc) = self.position.en_passant {
             if attacks.bb.has_piece_at(ep_loc) {
-                self.moves.push(mgen.with_dst(ep_loc).build())
+                self.moves
+                    .push(mgen.with_dst(ep_loc).is_en_passant_capture().build())
             }
         }
 
@@ -217,7 +218,7 @@ impl MoveGen<'_> {
             if (src_rank == Rank::Two && dst_rank == Rank::Four)
                 || (src_rank == Rank::Seven && dst_rank == Rank::Five)
             {
-                self.moves.push(b.sets_ep().build());
+                self.moves.push(b.is_double_pawn_push().build());
                 continue;
             }
 
@@ -316,7 +317,7 @@ mod tests {
 
         assert_eq!(moves.len(), 2);
         assert!(moves.contains(&mgen.with_dst(loc!(b 3)).build()));
-        assert!(moves.contains(&mgen.with_dst(loc!(b 4)).sets_ep().build()));
+        assert!(moves.contains(&mgen.with_dst(loc!(b 4)).is_double_pawn_push().build()));
 
         let src = loc!(d 7);
         let piece = mkp!(Black, Pawn);
@@ -330,7 +331,7 @@ mod tests {
 
         assert_eq!(moves.len(), 2);
         assert!(moves.contains(&mgen.with_dst(loc!(d 6)).build()));
-        assert!(moves.contains(&mgen.with_dst(loc!(d 5)).sets_ep().build()));
+        assert!(moves.contains(&mgen.with_dst(loc!(d 5)).is_double_pawn_push().build()));
     }
 
     #[test]
@@ -438,7 +439,7 @@ mod tests {
         pos.make_move(
             MoveBuilder::new(mkp!(Black, Pawn), loc!(b 7))
                 .with_dst(loc!(b 5))
-                .sets_ep()
+                .is_double_pawn_push()
                 .build(),
         )
         .consume();

@@ -15,6 +15,7 @@ use nom::{
     Finish, IResult, Parser,
 };
 use rmace::{
+    mmove::MoveType,
     parsers::{
         fen::{parse_fen, Fen},
         uci_move::{parse_uci_move, UciMove},
@@ -202,7 +203,12 @@ fn handle_cmd_position(pos: &mut Position, p: PosSpecifier, m: Option<Vec<UciMov
     if let Some(moves) = m {
         for m in moves.iter() {
             match MoveGen::new(pos).gen().iter().find(|x| {
-                x.src == m.src && x.dst == m.dst && x.promote.map(|x| x.kind()) == m.promote
+                x.src == m.src
+                    && x.dst == m.dst
+                    && match x.kind {
+                        MoveType::Promote(p) => Some(p.kind()),
+                        _ => None,
+                    } == m.promote
             }) {
                 Some(x) => pos.make_move(*x).consume(),
                 None => panic!("Move {} is not a valid move", m),
