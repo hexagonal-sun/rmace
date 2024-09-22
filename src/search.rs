@@ -182,7 +182,6 @@ impl Search {
             }
         }
 
-
         if self.pos.has_repeated() {
             return 0;
         }
@@ -257,7 +256,6 @@ impl Search {
                 0
             };
         }
-
 
         tentry.eval = alpha;
         self.ttable.insert(tentry);

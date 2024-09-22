@@ -17,7 +17,6 @@ pub struct TEntry {
     pub eval: i32,
 }
 
-
 const TABLE_SZ_MB: usize = 256;
 const ENTRIES: usize = TABLE_SZ_MB * 1024 * 1024 / std::mem::size_of::<TEntry>();
 
