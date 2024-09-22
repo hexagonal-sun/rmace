@@ -4,10 +4,11 @@ use std::{
         Arc,
     },
     thread::{self, sleep},
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use arrayvec::ArrayVec;
+use time::{TimeAction, TimeMan};
 use ttable::{EntryKind, TEntry, TTable};
 
 use crate::{
@@ -21,6 +22,7 @@ use crate::{
     },
 };
 
+mod time;
 mod ttable;
 
 const MAX_PLY: usize = 100;
@@ -30,11 +32,11 @@ type PvStack = ArrayVec<Move, MAX_PLY>;
 #[derive(Clone)]
 pub struct Search {
     pos: Position,
-    deadline: Option<Duration>,
     nodes: u32,
     should_exit: Arc<AtomicBool>,
     last_pv: PvStack,
     ttable: TTable,
+    time: TimeMan,
 }
 
 const INF: i32 = i32::MAX - 2;
@@ -60,20 +62,23 @@ impl Search {
     }
 
     pub fn go(mut self) -> Move {
-        let deadline = self.deadline.unwrap_or(Duration::from_secs(5));
-        let should_exit = self.should_exit.clone();
         let mut best_move = self.get_initial_move();
-
-        thread::spawn(move || {
-            sleep(deadline);
-            should_exit.store(true, Ordering::Relaxed);
-        });
 
         let mut depth = 1;
         let mut pv = PvStack::new();
+        let mut deadline = Duration::MAX;
 
         loop {
             self.nodes = 0;
+            let now = Instant::now();
+            self.should_exit = Arc::new(AtomicBool::new(false));
+            let should_exit = self.should_exit.clone();
+
+            thread::spawn(move || {
+                sleep(deadline);
+                should_exit.store(true, Ordering::Relaxed);
+            });
+
             let best_score = self.search(-INF, INF, 0, depth as u32, &mut pv);
 
             // Take the last move from the previous iteration, since when the
@@ -105,6 +110,12 @@ impl Search {
                 },
                 self.nodes,
             );
+
+            match self.time.iter_complete(best_score, best_move.unwrap(), now.elapsed()) {
+                time::TimeAction::YieldResult => return best_move.unwrap(),
+                TimeAction::Iterate(d) => deadline = d,
+            }
+
 
             if best_score == MATE || best_score == -MATE {
                 return best_move.unwrap();
@@ -273,17 +284,22 @@ impl SearchBuilder {
         Self {
             srch: Search {
                 pos,
-                deadline: None,
                 nodes: 0,
                 should_exit: Arc::new(AtomicBool::new(false)),
                 last_pv: ArrayVec::new(),
                 ttable: TTable::new(),
+                time: TimeMan::new(),
             },
         }
     }
 
     pub fn with_deadline(mut self, deadline: Duration) -> Self {
-        self.srch.deadline = Some(deadline);
+        self.srch.time.time_left = Some(deadline);
+        self
+    }
+
+    pub fn with_increment(mut self, increment: Duration) -> Self {
+        self.srch.time.increment = Some(increment);
         self
     }
 
