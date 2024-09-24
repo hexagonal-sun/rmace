@@ -111,11 +111,13 @@ impl Search {
                 self.nodes,
             );
 
-            match self.time.iter_complete(best_score, best_move.unwrap(), now.elapsed()) {
+            match self
+                .time
+                .iter_complete(best_score, best_move.unwrap(), now.elapsed())
+            {
                 time::TimeAction::YieldResult => return best_move.unwrap(),
                 TimeAction::Iterate(d) => deadline = d,
             }
-
 
             if best_score == MATE || best_score == -MATE {
                 return best_move.unwrap();
