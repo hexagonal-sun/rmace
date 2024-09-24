@@ -155,16 +155,16 @@ impl Position {
             self.en_passant = None;
         }
 
+        self.clr_piece_at(mmove.piece, mmove.src);
+
         match mmove.kind {
             MoveType::Normal => {
-                self.clr_piece_at(mmove.piece, mmove.src);
                 if let Some(p) = mmove.capture {
                     self.clr_piece_at(p, mmove.dst);
                 }
                 self.set_piece_at(mmove.piece, mmove.dst);
             }
             MoveType::DoublePPush => {
-                self.clr_piece_at(mmove.piece, mmove.src);
                 let ep_loc = match mmove.piece.colour() {
                     Colour::White => mmove.dst.south().unwrap(),
                     Colour::Black => mmove.dst.north().unwrap(),
@@ -174,7 +174,6 @@ impl Position {
                 self.set_piece_at(mmove.piece, mmove.dst);
             }
             MoveType::EnPassant => {
-                self.clr_piece_at(mmove.piece, mmove.src);
                 let c = self.to_play;
                 self.clr_piece_at(
                     Piece::new(PieceKind::Pawn, c.next()),
@@ -186,7 +185,6 @@ impl Position {
                 self.set_piece_at(mmove.piece, mmove.dst);
             }
             MoveType::Promote(promo_piece) => {
-                self.clr_piece_at(mmove.piece, mmove.src);
                 if let Some(cap_piece) = mmove.capture {
                     self.clr_piece_at(cap_piece, mmove.dst);
                 }
@@ -197,7 +195,6 @@ impl Position {
                     Self::get_castling_rook_positions(self.to_play, castle_kind);
 
                 let rook = Piece::new(PieceKind::Rook, self.to_play);
-                self.clr_piece_at(mmove.piece, mmove.src);
                 self.set_piece_at(mmove.piece, mmove.dst);
                 self.clr_piece_at(rook, rook_src);
                 self.set_piece_at(rook, rook_dst);
@@ -248,11 +245,9 @@ impl Position {
                 if let Some(p) = mmove.capture {
                     self.set_piece_at(p, mmove.dst);
                 }
-                self.set_piece_at(mmove.piece, mmove.src);
             }
             MoveType::DoublePPush => {
                 self.clr_piece_at(mmove.piece, mmove.dst);
-                self.set_piece_at(mmove.piece, mmove.src);
             }
             MoveType::EnPassant => {
                 self.clr_piece_at(mmove.piece, mmove.dst);
@@ -264,26 +259,24 @@ impl Position {
                         Colour::Black => mmove.dst.north().unwrap(),
                     },
                 );
-                self.set_piece_at(mmove.piece, mmove.src);
             }
             MoveType::Promote(promo_piece) => {
                 self.clr_piece_at(promo_piece, mmove.dst);
                 if let Some(cap_piece) = mmove.capture {
                     self.set_piece_at(cap_piece, mmove.dst);
                 }
-                self.set_piece_at(mmove.piece, mmove.src);
             }
             MoveType::Castle(castle_kind) => {
                 let (rook_src, rook_dst) =
                     Self::get_castling_rook_positions(self.to_play, castle_kind);
 
                 let rook = Piece::new(PieceKind::Rook, self.to_play);
-                self.set_piece_at(mmove.piece, mmove.src);
                 self.clr_piece_at(mmove.piece, mmove.dst);
                 self.set_piece_at(rook, rook_src);
                 self.clr_piece_at(rook, rook_dst);
             }
         }
+        self.set_piece_at(mmove.piece, mmove.src);
 
         self[mmove.piece] = self[mmove.piece]
             .set_piece_at(mmove.src)
