@@ -92,7 +92,7 @@ impl Search {
             best_move = self.last_pv.first().copied();
 
             println!(
-                "info depth {} pv{} score cp {} nodes {}",
+                "info depth {} pv{} score {} nodes {}",
                 depth,
                 self.last_pv.iter().map(|x| UciMove::from(*x)).fold(
                     String::new(),
@@ -106,7 +106,7 @@ impl Search {
                 } else if best_score == -MATE {
                     format!("mate -{}", self.last_pv.len().div_ceil(2))
                 } else {
-                    format!("{}", best_score)
+                    format!("cp {}", best_score)
                 },
                 self.nodes,
             );
