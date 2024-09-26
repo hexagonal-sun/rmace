@@ -1,4 +1,5 @@
 use std::{
+    fmt::Display,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc,
@@ -29,10 +30,29 @@ const MAX_PLY: usize = 100;
 
 type PvStack = ArrayVec<Move, MAX_PLY>;
 
+#[derive(Clone, Default)]
+pub struct SearchStats {
+    nodes: u32,
+    qnodes: u32,
+    ttable_hits: u32,
+    beta_cutoffs: u32,
+    alpha_increases: u32,
+}
+
+impl Display for SearchStats {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "nodes {} qnodes {} tthits {} cutoffs {} alphainc {}",
+            self.nodes, self.qnodes, self.ttable_hits, self.beta_cutoffs, self.alpha_increases
+        )
+    }
+}
+
 #[derive(Clone)]
 pub struct Search {
     pos: Position,
-    nodes: u32,
+    stats: SearchStats,
     should_exit: Arc<AtomicBool>,
     last_pv: PvStack,
     ttable: TTable,
@@ -69,7 +89,7 @@ impl Search {
         let mut deadline = Duration::MAX;
 
         loop {
-            self.nodes = 0;
+            self.stats = SearchStats::default();
             let now = Instant::now();
             self.should_exit = Arc::new(AtomicBool::new(false));
             let should_exit = self.should_exit.clone();
@@ -92,7 +112,7 @@ impl Search {
             best_move = self.last_pv.first().copied();
 
             println!(
-                "info depth {} pv{} score {} nodes {}",
+                "info depth {} pv{} score {} {}",
                 depth,
                 self.last_pv.iter().map(|x| UciMove::from(*x)).fold(
                     String::new(),
@@ -108,12 +128,12 @@ impl Search {
                 } else {
                     format!("cp {}", best_score)
                 },
-                self.nodes,
+                self.stats,
             );
 
             match self
                 .time
-                .iter_complete(best_score, best_move.unwrap(), now.elapsed())
+                .iter_complete(best_score, best_move.unwrap(), now.elapsed(), self.pos.material_count.into())
             {
                 time::TimeAction::YieldResult => return best_move.unwrap(),
                 TimeAction::Iterate(d) => deadline = d,
@@ -143,16 +163,17 @@ impl Search {
             alpha = stand_pat;
         }
 
-        if (self.nodes & 0xfff == 0xfff) && self.should_exit.load(Ordering::Relaxed) {
+        if (self.stats.nodes & 0xfff == 0xfff) && self.should_exit.load(Ordering::Relaxed) {
             return 0;
         }
-
-        self.nodes += 1;
 
         let mut cap_moves = MoveGen::new(&mut self.pos).gen();
         cap_moves.retain(|x| x.capture.is_some());
 
         for cap_move in cap_moves {
+            self.stats.nodes += 1;
+            self.stats.qnodes += 1;
+
             let token = self.pos.make_move(cap_move);
             if MoveGen::new(&self.pos).in_check(self.pos.to_play().next()) {
                 self.pos.undo_move(token);
@@ -174,6 +195,7 @@ impl Search {
     fn search(&mut self, mut alpha: i32, beta: i32, ply: u32, depth: u32, pv: &mut PvStack) -> i32 {
         if let Some(entry) = self.ttable.lookup(self.pos.hash()) {
             if entry.depth >= depth {
+                self.stats.ttable_hits += 1;
                 match entry.kind {
                     EntryKind::Score(m) => {
                         pv.clear();
@@ -240,16 +262,17 @@ impl Search {
             self.pos.undo_move(token);
 
             // Timeout detection.
-            if (self.nodes & 0xfff == 0xfff) && self.should_exit.load(Ordering::Relaxed) {
+            if (self.stats.nodes & 0xfff == 0xfff) && self.should_exit.load(Ordering::Relaxed) {
                 return 0;
             }
 
-            self.nodes += 1;
+            self.stats.nodes += 1;
 
             if eval >= beta {
                 tentry.kind = EntryKind::Beta;
                 tentry.eval = beta;
                 self.ttable.insert(tentry);
+                self.stats.beta_cutoffs += 1;
                 return beta;
             }
 
@@ -258,6 +281,7 @@ impl Search {
                 pv.clear();
                 pv.push(m);
                 tentry.kind = EntryKind::Score(m);
+                self.stats.alpha_increases += 1;
                 let _ = pv.try_extend_from_slice(&local_pv);
             }
         }
@@ -286,7 +310,7 @@ impl SearchBuilder {
         Self {
             srch: Search {
                 pos,
-                nodes: 0,
+                stats: SearchStats::default(),
                 should_exit: Arc::new(AtomicBool::new(false)),
                 last_pv: ArrayVec::new(),
                 ttable: TTable::new(),
