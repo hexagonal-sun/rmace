@@ -22,7 +22,7 @@ use rmace::{
     },
     piece::Colour,
     position::{movegen::MoveGen, Position},
-    search::SearchBuilder,
+    search::{SearchBuilder, SearchResults, MATE},
 };
 
 #[derive(Debug)]
@@ -172,8 +172,36 @@ fn handle_cmd_newgame(pos: &mut Position) {
     *pos = Position::default();
 }
 
+fn report_results(results: &SearchResults) {
+    println!(
+        "info depth {} pv{} score {} nodes {} qnodes {} tthits {} cutoffs {} alphainc {}",
+        results.depth,
+        results
+            .pv
+            .iter()
+            .map(|x| UciMove::from(*x))
+            .fold(String::new(), |mut accum, x| {
+                accum.push_str(&format!(" {}", x).to_owned());
+                accum
+            }),
+        if results.eval == MATE {
+            format!("mate {}", results.pv.len().div_ceil(2))
+        } else if results.eval == -MATE {
+            format!("mate -{}", results.pv.len().div_ceil(2))
+        } else {
+            format!("cp {}", results.eval)
+        },
+        results.nodes,
+        results.qnodes,
+        results.ttable_hits,
+        results.beta_cutoffs,
+        results.alpha_increases
+    );
+}
+
 fn handle_cmd_go(pos: &mut Position, specs: Vec<GoSpecifier>) {
-    let mut search = SearchBuilder::new(pos.clone());
+    let mut search = SearchBuilder::new(pos.clone())
+        .with_report_callback(report_results);
 
     if let Some(time_limit) = specs
         .iter()

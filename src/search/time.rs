@@ -4,7 +4,7 @@ use itertools::Itertools;
 use std::time::Duration;
 
 const MAX_DEPTH: usize = 20;
-const MIN_EARLY_YIELD_DEPTH: usize = 5;
+const MIN_EARLY_YIELD_DEPTH: usize = 8;
 
 pub enum TimeAction {
     YieldResult,

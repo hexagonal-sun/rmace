@@ -1,5 +1,4 @@
 use std::{
-    fmt::Display,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc,
@@ -14,7 +13,6 @@ use ttable::{EntryKind, TEntry, TTable};
 
 use crate::{
     mmove::Move,
-    parsers::uci_move::UciMove,
     piece::Colour,
     position::{
         eval::Evaluator,
@@ -30,37 +28,30 @@ const MAX_PLY: usize = 100;
 
 type PvStack = ArrayVec<Move, MAX_PLY>;
 
-#[derive(Clone, Default)]
-pub struct SearchStats {
-    nodes: u32,
-    qnodes: u32,
-    ttable_hits: u32,
-    beta_cutoffs: u32,
-    alpha_increases: u32,
+#[derive(Default)]
+pub struct SearchResults {
+    pub depth: usize,
+    pub pv: PvStack,
+    pub eval: i32,
+    pub nodes: u32,
+    pub qnodes: u32,
+    pub ttable_hits: u32,
+    pub beta_cutoffs: u32,
+    pub alpha_increases: u32,
 }
 
-impl Display for SearchStats {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "nodes {} qnodes {} tthits {} cutoffs {} alphainc {}",
-            self.nodes, self.qnodes, self.ttable_hits, self.beta_cutoffs, self.alpha_increases
-        )
-    }
-}
-
-#[derive(Clone)]
 pub struct Search {
     pos: Position,
-    stats: SearchStats,
     should_exit: Arc<AtomicBool>,
     last_pv: PvStack,
     ttable: TTable,
     time: TimeMan,
+    report_callback: Option<Box<dyn Fn(&SearchResults)>>,
+    results: SearchResults,
 }
 
 const INF: i32 = i32::MAX - 2;
-const MATE: i32 = INF - 1;
+pub const MATE: i32 = INF - 1;
 
 impl Search {
     pub fn order_moves(&self, ply: u32, moves: &mut MoveList) {
@@ -81,15 +72,30 @@ impl Search {
         moves.first().copied()
     }
 
+    fn obtain_pv(&mut self) {
+        self.results.pv.clear();
+        let mut pos = self.pos.clone();
+
+        while let Some(tentry) = self.ttable.lookup(pos.hash()) {
+            match tentry.kind {
+                EntryKind::Score(mv) => {
+                    self.results.pv.push(mv);
+                    pos.make_move(mv).consume();
+                }
+                _ => panic!("Unexpected tentry node type in PV"),
+            }
+        }
+    }
+
     pub fn go(mut self) -> Move {
         let mut best_move = self.get_initial_move();
 
         let mut depth = 1;
-        let mut pv = PvStack::new();
         let mut deadline = Duration::MAX;
 
         loop {
-            self.stats = SearchStats::default();
+            self.results = SearchResults::default();
+            self.results.depth = depth;
             let now = Instant::now();
             self.should_exit = Arc::new(AtomicBool::new(false));
             let should_exit = self.should_exit.clone();
@@ -99,7 +105,7 @@ impl Search {
                 should_exit.store(true, Ordering::Relaxed);
             });
 
-            let best_score = self.search(-INF, INF, 0, depth as u32, &mut pv);
+            self.results.eval = self.search(-INF, INF, 0, depth as u32);
 
             // Take the last move from the previous iteration, since when the
             // exit flag is true, we didn't complete the search.
@@ -107,39 +113,24 @@ impl Search {
                 return best_move.unwrap();
             }
 
-            self.last_pv = pv.clone();
+            self.obtain_pv();
+            self.last_pv = self.results.pv.clone();
 
             best_move = self.last_pv.first().copied();
 
-            println!(
-                "info depth {} pv{} score {} {}",
-                depth,
-                self.last_pv.iter().map(|x| UciMove::from(*x)).fold(
-                    String::new(),
-                    |mut accum, x| {
-                        accum.push_str(&format!(" {}", x).to_owned());
-                        accum
-                    }
-                ),
-                if best_score == MATE {
-                    format!("mate {}", self.last_pv.len().div_ceil(2))
-                } else if best_score == -MATE {
-                    format!("mate -{}", self.last_pv.len().div_ceil(2))
-                } else {
-                    format!("cp {}", best_score)
-                },
-                self.stats,
-            );
+            if let Some(ref cb) = self.report_callback {
+                cb(&self.results);
+            }
 
             match self
                 .time
-                .iter_complete(best_score, best_move.unwrap(), now.elapsed(), self.pos.material_count.into())
+                .iter_complete(self.results.eval, best_move.unwrap(), now.elapsed())
             {
                 time::TimeAction::YieldResult => return best_move.unwrap(),
                 TimeAction::Iterate(d) => deadline = d,
             }
 
-            if best_score == MATE || best_score == -MATE {
+            if self.results.eval == MATE || self.results.eval == -MATE {
                 return best_move.unwrap();
             }
 
@@ -163,7 +154,7 @@ impl Search {
             alpha = stand_pat;
         }
 
-        if (self.stats.nodes & 0xfff == 0xfff) && self.should_exit.load(Ordering::Relaxed) {
+        if (self.results.nodes & 0xfff == 0xfff) && self.should_exit.load(Ordering::Relaxed) {
             return 0;
         }
 
@@ -171,8 +162,8 @@ impl Search {
         cap_moves.retain(|x| x.capture.is_some());
 
         for cap_move in cap_moves {
-            self.stats.nodes += 1;
-            self.stats.qnodes += 1;
+            self.results.nodes += 1;
+            self.results.qnodes += 1;
 
             let token = self.pos.make_move(cap_move);
             if MoveGen::new(&self.pos).in_check(self.pos.to_play().next()) {
@@ -192,15 +183,16 @@ impl Search {
         alpha
     }
 
-    fn search(&mut self, mut alpha: i32, beta: i32, ply: u32, depth: u32, pv: &mut PvStack) -> i32 {
+    fn search(&mut self, mut alpha: i32, beta: i32, ply: u32, depth: u32) -> i32 {
         if let Some(entry) = self.ttable.lookup(self.pos.hash()) {
-            if entry.depth >= depth {
-                self.stats.ttable_hits += 1;
-                match entry.kind {
-                    EntryKind::Score(m) => {
-                        pv.clear();
-                        pv.push(m);
+            if entry.kind.is_score() && (entry.eval == -MATE || entry.eval == MATE) {
+                return entry.eval;
+            }
 
+            if entry.depth >= depth {
+                self.results.ttable_hits += 1;
+                match entry.kind {
+                    EntryKind::Score(_) => {
                         return entry.eval;
                     }
                     EntryKind::Alpha => {
@@ -228,8 +220,6 @@ impl Search {
         let mut mmoves = MoveGen::new(&mut self.pos).gen();
         self.order_moves(ply, &mut mmoves);
 
-        let mut local_pv = PvStack::new();
-
         let mut legal_moves = 0;
         let mut eval = -INF;
 
@@ -247,42 +237,38 @@ impl Search {
                 continue;
             }
             legal_moves += 1;
-            local_pv.clear();
 
             if legal_moves == 1 {
-                eval = -self.search(-beta, -alpha, ply + 1, depth - 1, &mut local_pv);
+                eval = -self.search(-beta, -alpha, ply + 1, depth - 1);
             } else {
-                eval = -self.search(-alpha - 1, -alpha, ply + 1, depth - 1, &mut local_pv);
+                eval = -self.search(-alpha - 1, -alpha, ply + 1, depth - 1);
 
                 if (eval > alpha) && (eval < beta) {
-                    eval = -self.search(-beta, -alpha, ply + 1, depth - 1, &mut local_pv);
+                    eval = -self.search(-beta, -alpha, ply + 1, depth - 1);
                 }
             }
 
             self.pos.undo_move(token);
 
             // Timeout detection.
-            if (self.stats.nodes & 0xfff == 0xfff) && self.should_exit.load(Ordering::Relaxed) {
+            if (self.results.nodes & 0xfff == 0xfff) && self.should_exit.load(Ordering::Relaxed) {
                 return 0;
             }
 
-            self.stats.nodes += 1;
+            self.results.nodes += 1;
 
             if eval >= beta {
                 tentry.kind = EntryKind::Beta;
                 tentry.eval = beta;
                 self.ttable.insert(tentry);
-                self.stats.beta_cutoffs += 1;
+                self.results.beta_cutoffs += 1;
                 return beta;
             }
 
             if eval > alpha {
                 alpha = eval;
-                pv.clear();
-                pv.push(m);
                 tentry.kind = EntryKind::Score(m);
-                self.stats.alpha_increases += 1;
-                let _ = pv.try_extend_from_slice(&local_pv);
+                self.results.alpha_increases += 1;
             }
         }
 
@@ -310,17 +296,23 @@ impl SearchBuilder {
         Self {
             srch: Search {
                 pos,
-                stats: SearchStats::default(),
+                results: SearchResults::default(),
                 should_exit: Arc::new(AtomicBool::new(false)),
                 last_pv: ArrayVec::new(),
                 ttable: TTable::new(),
                 time: TimeMan::new(),
+                report_callback: None,
             },
         }
     }
 
     pub fn with_deadline(mut self, deadline: Duration) -> Self {
         self.srch.time.time_left = Some(deadline);
+        self
+    }
+
+    pub fn with_report_callback(mut self, callback: impl Fn(&SearchResults) + 'static) -> Self {
+        self.srch.report_callback = Some(Box::new(callback));
         self
     }
 

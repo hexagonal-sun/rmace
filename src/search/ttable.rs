@@ -2,14 +2,23 @@ use std::collections::HashMap;
 
 use crate::{mmove::Move, position::zobrist::ZobristKey};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum EntryKind {
     Score(Move),
     Alpha,
     Beta,
 }
 
-#[derive(Clone)]
+impl EntryKind {
+    pub fn is_score(&self) -> bool {
+        match self {
+            EntryKind::Score(_) => true,
+            _ => false,
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct TEntry {
     pub hash: ZobristKey,
     pub depth: u32,
