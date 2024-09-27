@@ -12,7 +12,7 @@ use time::{TimeAction, TimeMan};
 use ttable::{EntryKind, TEntry, TTable};
 
 use crate::{
-    mmove::Move,
+    mmove::{Move, MoveType},
     piece::Colour,
     position::{
         eval::Evaluator,
@@ -58,6 +58,21 @@ impl Search {
     pub fn order_moves(&self, ply: u32, moves: &mut MoveList) {
         // order captures first.
         moves.sort_by(|x, y| y.mvv_lva().cmp(&x.mvv_lva()));
+
+        // then promotions.
+        moves.sort_by(|x, y| {
+            let x_sc = match x.kind {
+                MoveType::Promote(p) => p.kind().score(),
+                _ => 0,
+            };
+
+            let y_sc = match y.kind {
+                MoveType::Promote(p) => p.kind().score(),
+                _ => 0,
+            };
+
+            y_sc.cmp(&x_sc)
+        });
 
         // Always investigate the corresponding node from the previous PV first
         if let Some(mmove) = self.last_pv.get(ply as usize) {
