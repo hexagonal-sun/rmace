@@ -44,6 +44,7 @@ pub struct Search {
     pos: Position,
     should_exit: Arc<AtomicBool>,
     last_pv: PvStack,
+    pv: ArrayVec<PvStack, MAX_PLY>,
     ttable: TTable,
     time: TimeMan,
     report_callback: Option<Box<dyn Fn(&SearchResults)>>,
@@ -88,21 +89,6 @@ impl Search {
         moves.first().copied()
     }
 
-    fn obtain_pv(&mut self) {
-        self.results.pv.clear();
-        let mut pos = self.pos.clone();
-
-        while let Some(tentry) = self.ttable.lookup(pos.hash()) {
-            match tentry.kind {
-                EntryKind::Score(mv) => {
-                    self.results.pv.push(mv);
-                    pos.make_move(mv).consume();
-                }
-                _ => panic!("Unexpected tentry node type in PV"),
-            }
-        }
-    }
-
     pub fn go(mut self) -> SearchResults {
         let mut depth = 1;
         let mut deadline = Duration::MAX;
@@ -130,7 +116,7 @@ impl Search {
                 return last_results;
             }
 
-            self.obtain_pv();
+            self.results.pv = self.pv[0].clone();
             self.last_pv = self.results.pv.clone();
 
             if let Some(ref cb) = self.report_callback {
@@ -206,7 +192,7 @@ impl Search {
         alpha
     }
 
-    fn search(&mut self, mut alpha: i32, beta: i32, ply: u32, depth: u32) -> i32 {
+    fn search(&mut self, mut alpha: i32, beta: i32, ply: usize, depth: u32) -> i32 {
         if let Some(entry) = self.ttable.lookup(self.pos.hash()) {
             if entry.kind.is_score() && (entry.eval == -MATE || entry.eval == MATE) {
                 return entry.eval;
@@ -241,7 +227,7 @@ impl Search {
         }
 
         let mut mmoves = MoveGen::new(&mut self.pos).gen();
-        self.order_moves(ply, &mut mmoves);
+        self.order_moves(ply as u32, &mut mmoves);
 
         let mut legal_moves = 0;
         let mut eval = -INF;
@@ -291,12 +277,16 @@ impl Search {
             if eval > alpha {
                 alpha = eval;
                 tentry.kind = EntryKind::Score(m);
+                self.pv[ply].clear();
+                self.pv[ply].push(m);
+                self.pv[ply + 1].clone().into_iter().for_each(|m| self.pv[ply].push(m));
                 self.results.alpha_increases += 1;
             }
         }
 
         if legal_moves == 0 {
             return if MoveGen::new(&self.pos).in_check(self.pos.to_play()) {
+                self.pv[ply].clear();
                 -MATE
             } else {
                 0
@@ -322,6 +312,7 @@ impl SearchBuilder {
                 results: SearchResults::default(),
                 should_exit: Arc::new(AtomicBool::new(false)),
                 last_pv: ArrayVec::new(),
+                pv: ArrayVec::from_iter((0..MAX_PLY).map(|_| PvStack::new())),
                 ttable: TTable::new(),
                 time: TimeMan::new(),
                 to_depth: None,
