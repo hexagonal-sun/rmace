@@ -47,6 +47,7 @@ pub struct Search {
     ttable: TTable,
     time: TimeMan,
     report_callback: Option<Box<dyn Fn(&SearchResults)>>,
+    to_depth: Option<usize>,
     results: SearchResults,
 }
 
@@ -87,11 +88,10 @@ impl Search {
         }
     }
 
-    pub fn go(mut self) -> Move {
-        let mut best_move = self.get_initial_move();
-
+    pub fn go(mut self) -> SearchResults {
         let mut depth = 1;
         let mut deadline = Duration::MAX;
+        let mut last_results = SearchResults::default();
 
         loop {
             self.results = SearchResults::default();
@@ -100,41 +100,49 @@ impl Search {
             self.should_exit = Arc::new(AtomicBool::new(false));
             let should_exit = self.should_exit.clone();
 
-            thread::spawn(move || {
-                sleep(deadline);
-                should_exit.store(true, Ordering::Relaxed);
-            });
+            if self.to_depth.is_none() {
+                thread::spawn(move || {
+                    sleep(deadline);
+                    should_exit.store(true, Ordering::Relaxed);
+                });
+            }
 
             self.results.eval = self.search(-INF, INF, 0, depth as u32);
 
-            // Take the last move from the previous iteration, since when the
+            // Take the last results from the previous iteration, since when the
             // exit flag is true, we didn't complete the search.
             if self.should_exit.load(Ordering::Relaxed) {
-                return best_move.unwrap();
+                return last_results;
             }
 
             self.obtain_pv();
             self.last_pv = self.results.pv.clone();
 
-            best_move = self.last_pv.first().copied();
-
             if let Some(ref cb) = self.report_callback {
                 cb(&self.results);
             }
 
-            match self
-                .time
-                .iter_complete(self.results.eval, best_move.unwrap(), now.elapsed())
-            {
-                time::TimeAction::YieldResult => return best_move.unwrap(),
-                TimeAction::Iterate(d) => deadline = d,
+            if let Some(srch_depth) = self.to_depth {
+                if srch_depth == self.results.depth {
+                    return self.results;
+                }
+            } else {
+                match self.time.iter_complete(
+                    self.results.eval,
+                    *self.results.pv.first().unwrap(),
+                    now.elapsed(),
+                ) {
+                    time::TimeAction::YieldResult => return self.results,
+                    TimeAction::Iterate(d) => deadline = d,
+                }
             }
 
             if self.results.eval == MATE || self.results.eval == -MATE {
-                return best_move.unwrap();
+                return self.results;
             }
 
             depth += 1;
+            last_results = self.results;
         }
     }
 
@@ -301,6 +309,7 @@ impl SearchBuilder {
                 last_pv: ArrayVec::new(),
                 ttable: TTable::new(),
                 time: TimeMan::new(),
+                to_depth: None,
                 report_callback: None,
             },
         }
@@ -313,6 +322,11 @@ impl SearchBuilder {
 
     pub fn with_report_callback(mut self, callback: impl Fn(&SearchResults) + 'static) -> Self {
         self.srch.report_callback = Some(Box::new(callback));
+        self
+    }
+
+    pub fn with_depth(mut self, depth: usize) -> Self {
+        self.srch.to_depth = Some(depth);
         self
     }
 

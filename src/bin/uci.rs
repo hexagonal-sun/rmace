@@ -35,6 +35,7 @@ enum PosSpecifier {
 enum GoSpecifier {
     Time(Colour, Duration),
     Inc(Colour, Duration),
+    Depth(usize),
 }
 
 #[derive(Debug)]
@@ -123,8 +124,15 @@ fn parse_time_inc(input: &str) -> IResult<&str, GoSpecifier> {
     )(input)
 }
 
+fn parse_depth_spec(input: &str) -> IResult<&str, GoSpecifier> {
+    map_res(
+        tuple((ws(tag("depth")), digit1)),
+        |(_, n)| -> Result<GoSpecifier> { Ok(GoSpecifier::Depth(n.parse()?)) },
+    )(input)
+}
+
 fn parse_go_specs(input: &str) -> IResult<&str, Vec<GoSpecifier>> {
-    many0(alt((parse_time_spec, parse_time_inc)))(input)
+    many0(alt((parse_time_spec, parse_time_inc, parse_depth_spec)))(input)
 }
 
 fn parse_cmd_go(input: &str) -> IResult<&str, UciCmd> {
@@ -200,24 +208,21 @@ fn report_results(results: &SearchResults) {
 }
 
 fn handle_cmd_go(pos: &mut Position, specs: Vec<GoSpecifier>) {
-    let mut search = SearchBuilder::new(pos.clone())
-        .with_report_callback(report_results);
+    let mut search = SearchBuilder::new(pos.clone()).with_report_callback(report_results);
 
-    if let Some(time_limit) = specs
-        .iter()
-        .find_map(|x| match x {
-            GoSpecifier::Time(colour, deadline) if *colour == pos.to_play() => Some(deadline),
-            _ => None,
-        })
-        .copied()
-    {
-        // TODO: Naive  time control algorithm detected!
-        search = search.with_deadline(time_limit.mul_f64(0.15));
+    for spec in specs.iter() {
+        match spec {
+            GoSpecifier::Time(colour, deadline) if *colour == pos.to_play() => {
+                search = search.with_deadline(*deadline)
+            }
+            GoSpecifier::Depth(d) => search = search.with_depth(*d),
+            _ => {}
+        }
     }
 
-    let mmove = search.build().go();
+    let results = search.build().go();
 
-    println!("bestmove {}", UciMove::from(mmove))
+    println!("bestmove {}", UciMove::from(*results.pv.first().unwrap()))
 }
 
 fn handle_cmd_position(pos: &mut Position, p: PosSpecifier, m: Option<Vec<UciMove>>) {
