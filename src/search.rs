@@ -43,7 +43,6 @@ pub struct SearchResults {
 pub struct Search {
     pos: Position,
     should_exit: Arc<AtomicBool>,
-    last_pv: PvStack,
     pv: ArrayVec<PvStack, MAX_PLY>,
     ttable: TTable,
     time: TimeMan,
@@ -56,7 +55,7 @@ const INF: i32 = i32::MAX - 2;
 pub const MATE: i32 = INF - 1;
 
 impl Search {
-    pub fn order_moves(&self, ply: u32, moves: &mut MoveList) {
+    pub fn order_moves(&self, moves: &mut MoveList) {
         // order captures first.
         moves.sort_by(|x, y| y.mvv_lva().cmp(&x.mvv_lva()));
 
@@ -76,9 +75,14 @@ impl Search {
         });
 
         // Always investigate the corresponding node from the previous PV first
-        if let Some(mmove) = self.last_pv.get(ply as usize) {
-            if let Some(idx) = moves.iter().position(|x| *x == *mmove) {
-                moves.swap(idx, 0);
+        if let Some(tentry) = self.ttable.lookup(self.pos.hash()) {
+            match tentry.kind {
+                EntryKind::Score(m) => {
+                    if let Some(idx) = moves.iter().position(|x| *x == m) {
+                        moves.swap(idx, 0);
+                    }
+                }
+                _ => {}
             }
         }
     }
@@ -117,7 +121,6 @@ impl Search {
             }
 
             self.results.pv = self.pv[0].clone();
-            self.last_pv = self.results.pv.clone();
 
             if let Some(ref cb) = self.report_callback {
                 cb(&self.results);
@@ -227,7 +230,7 @@ impl Search {
         }
 
         let mut mmoves = MoveGen::new(&mut self.pos).gen();
-        self.order_moves(ply as u32, &mut mmoves);
+        self.order_moves(&mut mmoves);
 
         let mut legal_moves = 0;
         let mut eval = -INF;
@@ -279,7 +282,10 @@ impl Search {
                 tentry.kind = EntryKind::Score(m);
                 self.pv[ply].clear();
                 self.pv[ply].push(m);
-                self.pv[ply + 1].clone().into_iter().for_each(|m| self.pv[ply].push(m));
+                self.pv[ply + 1]
+                    .clone()
+                    .into_iter()
+                    .for_each(|m| self.pv[ply].push(m));
                 self.results.alpha_increases += 1;
             }
         }
@@ -311,7 +317,6 @@ impl SearchBuilder {
                 pos,
                 results: SearchResults::default(),
                 should_exit: Arc::new(AtomicBool::new(false)),
-                last_pv: ArrayVec::new(),
                 pv: ArrayVec::from_iter((0..MAX_PLY).map(|_| PvStack::new())),
                 ttable: TTable::new(),
                 time: TimeMan::new(),
@@ -357,7 +362,7 @@ mod test {
             locus::loc,
             movegen::{MoveGen, MoveList},
             Position,
-        },
+        }, search::ttable::{EntryKind, TEntry},
     };
 
     use super::SearchBuilder;
@@ -370,20 +375,16 @@ mod test {
             .build();
 
         let mut srch = SearchBuilder::new(pos.clone()).build();
-        srch.last_pv = ArrayVec::from_iter(vec![
-            MoveBuilder::new(mkp!(Black, Pawn), loc!(a 3))
-                .with_dst(loc!(a 4))
-                .build(),
-            MoveBuilder::new(mkp!(Black, Pawn), loc!(a 3))
-                .with_dst(loc!(a 4))
-                .build(),
-            principle_move,
-            MoveBuilder::new(mkp!(Black, Pawn), loc!(a 3))
-                .with_dst(loc!(a 4))
-                .build(),
-        ]);
+        srch.ttable.insert(TEntry {
+            hash: pos.hash(),
+            depth: 1,
+            kind: EntryKind::Score(principle_move),
+            eval: 5,
+        });
+
         let mut moves = MoveGen::new(&mut pos).gen();
-        srch.order_moves(2, &mut moves);
+        srch.order_moves(&mut moves);
+        assert_eq!(*moves.first().unwrap(), principle_move);
 
         let low_val_capture = MoveBuilder::new(mkp!(Black, Queen), loc!(a 1))
             .with_dst(loc!(b 1))
@@ -405,7 +406,7 @@ mod test {
         some_moves.push(mid_val_capture.build());
         some_moves.push(high_val_capture.build());
 
-        srch.order_moves(2, &mut some_moves);
+        srch.order_moves(&mut some_moves);
 
         assert_eq!(
             some_moves.to_vec(),
@@ -419,7 +420,5 @@ mod test {
             .map(|x| x.build())
             .collect::<Vec<_>>()
         );
-
-        assert_eq!(*moves.first().unwrap(), principle_move);
     }
 }
