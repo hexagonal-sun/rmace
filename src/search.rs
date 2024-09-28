@@ -398,10 +398,20 @@ mod test {
             .with_dst(loc!(b 1))
             .with_capture(mkp!(White, Queen));
 
+        let high_val_promote = MoveBuilder::new(mkp!(Black, Pawn), loc!(a 1))
+            .with_dst(loc!(b 1))
+            .with_pawn_promotion(mkp!(Black, Queen));
+
+        let low_val_promote = MoveBuilder::new(mkp!(Black, Pawn), loc!(a 1))
+            .with_dst(loc!(b 1))
+            .with_pawn_promotion(mkp!(Black, Rook));
+
         let no_capture = MoveBuilder::new(mkp!(Black, Pawn), loc!(a 1)).with_dst(loc!(b 1));
 
         let mut some_moves = MoveList::new();
         some_moves.push(no_capture.build());
+        some_moves.push(low_val_promote.build());
+        some_moves.push(high_val_promote.build());
         some_moves.push(low_val_capture.build());
         some_moves.push(mid_val_capture.build());
         some_moves.push(high_val_capture.build());
@@ -411,6 +421,8 @@ mod test {
         assert_eq!(
             some_moves.to_vec(),
             vec![
+                high_val_promote,
+                low_val_promote,
                 high_val_capture,
                 mid_val_capture,
                 low_val_capture,
