@@ -362,7 +362,7 @@ mod test {
             locus::loc,
             movegen::{MoveGen, MoveList},
             Position,
-        }, search::ttable::{EntryKind, TEntry},
+        }, search::{ttable::{EntryKind, TEntry}, MATE},
     };
 
     use super::SearchBuilder;
@@ -420,5 +420,45 @@ mod test {
             .map(|x| x.build())
             .collect::<Vec<_>>()
         );
+    }
+
+    #[test]
+    fn mate_3_pos1() {
+        let pos =
+            Position::from_fen("4r1k1/p1qn1ppp/1p3n2/4NR2/3P4/B5Q1/P1r3PP/R6K w - - 1 20").unwrap();
+
+        let results = SearchBuilder::new(pos).with_depth(6).build().go();
+
+        assert_eq!(results.eval, MATE);
+    }
+
+    #[test]
+    fn mate_3_pos2() {
+        let pos =
+            Position::from_fen("r1b1k2r/pp3p2/6p1/3pq3/1P4P1/P2BPQp1/5PP1/R4RK1 b kq - 1 20").unwrap();
+
+        let results = SearchBuilder::new(pos).with_depth(6).build().go();
+
+        assert_eq!(results.eval, MATE);
+    }
+
+    #[test]
+    fn mate_3_pos3() {
+        let pos =
+            Position::from_fen("1r4k1/4pp1p/3p2p1/1P1Pn3/Q3P3/3n2PP/5qBK/1R3R2 b - - 1 31").unwrap();
+
+        let results = SearchBuilder::new(pos).with_depth(6).build().go();
+
+        assert_eq!(results.eval, MATE);
+    }
+
+    #[test]
+    fn mate_4_pos1() {
+        let pos =
+            Position::from_fen("1r4k1/4pp1p/3p2p1/1P1Pn3/Q3P3/3n2PP/5qBK/1R3R2 b - - 1 31").unwrap();
+
+        let results = SearchBuilder::new(pos).with_depth(6).build().go();
+
+        assert_eq!(results.eval, MATE);
     }
 }
