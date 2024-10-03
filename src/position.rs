@@ -48,7 +48,7 @@ pub struct Position {
     en_passant: Option<Locus>,
     castling_rights: CastlingRights,
     material_count: u8,
-    move_stack: ArrayVec<UndoMove, 256>,
+    move_stack: ArrayVec<UndoMove, 512>,
     zobrist: Zobrist,
     hash: ZobristKey,
 }
