@@ -205,6 +205,7 @@ impl Search {
                 self.results.ttable_hits += 1;
                 match entry.kind {
                     EntryKind::Score(_) => {
+                        self.pv[ply].clear();
                         return entry.eval;
                     }
                     EntryKind::Alpha => {
@@ -222,6 +223,7 @@ impl Search {
         }
 
         if self.pos.has_repeated() {
+            self.pv[ply].clear();
             return 0;
         }
 
@@ -291,8 +293,8 @@ impl Search {
         }
 
         if legal_moves == 0 {
+            self.pv[ply].clear();
             return if MoveGen::new(&self.pos).in_check(self.pos.to_play()) {
-                self.pv[ply].clear();
                 -MATE
             } else {
                 0
