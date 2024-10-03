@@ -4,6 +4,7 @@ set -u
 set -x
 
 testBranch=$1;
+concurrency=$2;
 
 gitrepo="$(git rev-parse --show-toplevel)"
 
@@ -36,6 +37,6 @@ cutechess-cli \
     -openings file="$masterdir"/etc/8moves_v3.pgn \
     -games 2 -rounds 2500 -repeat 2 -maxmoves 200 \
     -sprt elo0=0 elo1=10 alpha=0.05 beta=0.05 \
-    -concurrency 4 \
+    -concurrency $concurrency \
     -ratinginterval 10 \
     -each  tc=inf/10+0.1
