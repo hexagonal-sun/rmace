@@ -172,6 +172,7 @@ impl Search {
 
         let mut cap_moves = MoveGen::new(&mut self.pos).gen();
         cap_moves.retain(|x| x.capture.is_some());
+        self.order_moves(&mut cap_moves);
 
         for cap_move in cap_moves {
             self.results.nodes += 1;
